@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "id": "place_purchase_order",
+  "name": "Place Purchase Order",
+  "description": "SKU로 품목을 검색하고 수량을 입력해 발주를 제출합니다.",
+  "start_url": "http://localhost:8000/index.html",
+  "variables": {
+    "sku": {
+      "type": "string",
+      "required": true,
+      "description": "발주할 품목의 SKU (예: SKU-1001)"
+    },
+    "quantity": {
+      "type": "number",
+      "required": true,
+      "description": "발주 수량"
+    },
+    "note": {
+      "type": "string",
+      "required": false,
+      "description": "발주 메모 (선택)",
+      "default": ""
+    }
+  },
+  "steps": [
+    {
+      "id": "enter_sku",
+      "action": "input",
+      "target": {
+        "selectors": [
+          { "type": "css", "value": "#sku-input" },
+          { "type": "xpath", "value": "//input[@name='sku']" }
+        ]
+      },
+      "value": { "type": "variable", "name": "sku" },
+      "wait_after": { "timeout_ms": 5000 }
+    },
+    {
+      "id": "click_search",
+      "action": "click",
+      "target": {
+        "selectors": [{ "type": "css", "value": "#search-btn" }]
+      },
+      "wait_after": { "timeout_ms": 5000 }
+    },
+    {
+      "id": "read_item_name",
+      "action": "extract",
+      "target": {
+        "selectors": [{ "type": "css", "value": "#item-name" }]
+      },
+      "extract_as": "item_name",
+      "wait_after": { "timeout_ms": 5000 }
+    },
+    {
+      "id": "enter_quantity",
+      "action": "input",
+      "target": {
+        "selectors": [{ "type": "css", "value": "#quantity-input" }]
+      },
+      "value": { "type": "variable", "name": "quantity" },
+      "wait_after": { "timeout_ms": 5000 }
+    },
+    {
+      "id": "enter_note",
+      "action": "input",
+      "target": {
+        "selectors": [{ "type": "css", "value": "#note-input" }]
+      },
+      "value": { "type": "variable", "name": "note" },
+      "wait_after": { "timeout_ms": 3000 }
+    },
+    {
+      "id": "submit_order",
+      "action": "click",
+      "target": {
+        "selectors": [{ "type": "css", "value": "#submit-order-btn" }]
+      },
+      "wait_after": { "timeout_ms": 8000 }
+    },
+    {
+      "id": "read_confirmation",
+      "action": "extract",
+      "target": {
+        "selectors": [{ "type": "css", "value": "#order-confirmation" }]
+      },
+      "extract_as": "confirmation_message",
+      "wait_after": { "timeout_ms": 5000 }
+    }
+  ]
+}

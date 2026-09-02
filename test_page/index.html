@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Internal System (Test Fixture)</title>
+</head>
+<body>
+  <h1>사내 발주 시스템 (테스트용)</h1>
+
+  <div>
+    <label>SKU: <input id="sku-input" type="text" /></label>
+    <button id="search-btn">검색</button>
+  </div>
+
+  <div>
+    <span>품목명: </span><span id="item-name"></span>
+  </div>
+
+  <div>
+    <label>수량: <input id="quantity-input" type="text" /></label>
+  </div>
+
+  <div>
+    <label>메모: <input id="note-input" type="text" /></label>
+  </div>
+
+  <div>
+    <button id="submit-order-btn">발주 제출</button>
+  </div>
+
+  <div>
+    <span id="order-confirmation"></span>
+  </div>
+
+  <script>
+    var CATALOG = {
+      "SKU-1001": "Widget A",
+      "SKU-1002": "Widget B"
+    };
+
+    document.getElementById("search-btn").addEventListener("click", function () {
+      var sku = document.getElementById("sku-input").value;
+      document.getElementById("item-name").textContent = CATALOG[sku] || "(알 수 없는 SKU)";
+    });
+
+    document.getElementById("submit-order-btn").addEventListener("click", function () {
+      var itemName = document.getElementById("item-name").textContent;
+      var qty = document.getElementById("quantity-input").value;
+      setTimeout(function () {
+        document.getElementById("order-confirmation").textContent =
+          "Order #12345 confirmed for " + itemName + " x" + qty;
+      }, 800);
+    });
+  </script>
+</body>
+</html>
