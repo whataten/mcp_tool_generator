@@ -10,6 +10,12 @@ POLL_INTERVAL_SECONDS = 0.25
 
 HEADLESS = os.environ.get("MCP_TOOL_GENERATOR_HEADLESS", "0") == "1"
 
-# "chrome" (default) or "edge" — Edge is Chromium-based and works as a drop-in
-# fallback on machines without Chrome installed (e.g. this dev sandbox).
-BROWSER = os.environ.get("MCP_TOOL_GENERATOR_BROWSER", "chrome")
+# "edge" (default) or "chrome"
+BROWSER = os.environ.get("MCP_TOOL_GENERATOR_BROWSER", "edge")
+
+# Explicit path to a chromedriver.exe / msedgedriver.exe binary. Selenium
+# normally auto-downloads the matching driver on first use, which requires
+# internet access — set this when running somewhere without it (e.g. an
+# internal/air-gapped network) so the driver doesn't need to be fetched.
+# Leave unset to keep the automatic behavior.
+DRIVER_PATH = os.environ.get("MCP_TOOL_GENERATOR_DRIVER_PATH") or None

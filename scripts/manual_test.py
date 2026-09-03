@@ -28,6 +28,7 @@ def main():
     assert result.status == "success", f"expected success, got {result.status}: {result.error}"
     assert result.extracted.get("item_name") == "Widget A", result.extracted
     assert "Order #12345" in result.extracted.get("confirmation_message", ""), result.extracted
+    assert result.screenshot_path and os.path.exists(result.screenshot_path)
 
     print("\n=== bad selector call (expect error / selector_not_found) ===")
     broken = recordings["place_purchase_order"].model_copy(deep=True)

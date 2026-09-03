@@ -98,7 +98,7 @@ class Recording(BaseModel):
     schema_version: Literal[1] = 1
     id: str
     name: str
-    description: str
+    description: str = Field(min_length=10)
     start_url: str
     variables: dict[str, VariableSpec] = {}
     steps: list[Step] = Field(min_length=1)
