@@ -35,3 +35,4 @@ class ToolResult(BaseModel):
     step_results: list[StepResult] = []
     extracted: dict[str, Any] = {}
     error: Optional[ErrorDetail] = None
+    screenshot_path: Optional[str] = None

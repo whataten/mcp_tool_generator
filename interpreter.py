@@ -88,11 +88,13 @@ class RecordingInterpreter:
                         error=err,
                     )
 
+            screenshot_path = sr.capture_screenshot(driver, self.screenshot_dir, self.recording.id, "final")
             return ToolResult(
                 status="success",
                 recording_id=self.recording.id,
                 step_results=step_results,
                 extracted=extracted,
+                screenshot_path=screenshot_path,
             )
         finally:
             try:

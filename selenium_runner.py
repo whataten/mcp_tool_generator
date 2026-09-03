@@ -8,7 +8,9 @@ from selenium.common.exceptions import (
     NoSuchElementException,
     StaleElementReferenceException,
 )
+from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.common.by import By
+from selenium.webdriver.edge.service import Service as EdgeService
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select
 
@@ -43,13 +45,15 @@ def new_driver():
         if config.HEADLESS:
             options.add_argument("--headless=new")
         options.add_argument("--window-size=1280,900")
-        return webdriver.Edge(options=options)
+        service = EdgeService(executable_path=config.DRIVER_PATH) if config.DRIVER_PATH else None
+        return webdriver.Edge(options=options, service=service)
 
     options = webdriver.ChromeOptions()
     if config.HEADLESS:
         options.add_argument("--headless=new")
     options.add_argument("--window-size=1280,900")
-    return webdriver.Chrome(options=options)
+    service = ChromeService(executable_path=config.DRIVER_PATH) if config.DRIVER_PATH else None
+    return webdriver.Chrome(options=options, service=service)
 
 
 def resolve_element(driver, target: Target, action: ActionType, timeout_ms: int):

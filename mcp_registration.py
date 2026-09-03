@@ -88,5 +88,5 @@ class ToolRegistry:
         interpreter = RecordingInterpreter(recording)
         result = await asyncio.to_thread(interpreter.run, bound_vars)
         result_json = result.model_dump(mode="json")
-        screenshot_path = result.error.screenshot_path if result.error else None
+        screenshot_path = result.error.screenshot_path if result.error else result.screenshot_path
         return _to_call_tool_result(result_json, screenshot_path)
