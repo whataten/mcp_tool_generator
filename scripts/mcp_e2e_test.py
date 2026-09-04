@@ -3,11 +3,19 @@
 인자 없이 실행하면 내장된 샘플 레코딩(place_purchase_order)을 테스트합니다 (사전에
 test_page/ 에서 `python -m http.server 8000` 실행 필요).
 
-다른 레코딩(예: 사내 시스템에서 만든 레코딩)을 테스트하려면 tool id와 JSON 인자를
-직접 넘기면 됩니다 — recordings/ 폴더에 해당 레코딩 JSON을 넣어둔 상태여야 합니다:
+다른 레코딩(예: 사내 시스템에서 만든 레코딩)을 테스트하려면 tool id와 인자를 넘기면
+됩니다 — recordings/ 폴더에 해당 레코딩 JSON을 넣어둔 상태여야 합니다.
 
-    python scripts/mcp_e2e_test.py <tool_id> '<json 인자>'
-    예) python scripts/mcp_e2e_test.py search_customer_info "{\"customer_id\": \"12345\"}"
+인자는 세 가지 방식 중 편한 것으로 주면 됩니다:
+
+    1) key=value (셸 따옴표 문제가 없어 가장 안전 — PowerShell에서도 그대로 동작)
+       python scripts/mcp_e2e_test.py search_customer_info customer_id=12345
+
+    2) JSON 파일 경로 (값에 공백/특수문자가 많을 때)
+       python scripts/mcp_e2e_test.py search_customer_info args.json
+
+    3) JSON 문자열 (cmd/bash에서만 권장 — PowerShell은 따옴표를 뭉갭니다)
+       python scripts/mcp_e2e_test.py search_customer_info "{\"customer_id\": \"12345\"}"
 
 이 모드에서는 결과가 맞는지 자동으로 assert하지 않고 그대로 출력만 합니다 — 기대값을
 모르는 실제 시스템 대상이라, 성공/실패와 화면(screenshot_path)을 보고 사람이 판단하는
@@ -37,11 +45,29 @@ DEFAULT_TOOL = "place_purchase_order"
 DEFAULT_ARGUMENTS = {"sku": "SKU-1001", "quantity": 2, "note": "e2e test"}
 
 
+def parse_arguments(argv: list[str]) -> dict:
+    """key=value 쌍 / JSON 파일 경로 / JSON 문자열 중 무엇이 와도 dict로 만든다."""
+    if all("=" in a and not a.lstrip().startswith("{") for a in argv):
+        return dict(a.split("=", 1) for a in argv)
+
+    first = argv[0]
+    if os.path.isfile(first):
+        with open(first, "r", encoding="utf-8") as f:
+            return json.load(f)
+
+    return json.loads(first)
+
+
 async def main():
     custom = len(sys.argv) >= 3
     if custom:
         tool_name = sys.argv[1]
-        arguments = json.loads(sys.argv[2])
+        try:
+            arguments = parse_arguments(sys.argv[2:])
+        except (json.JSONDecodeError, ValueError) as e:
+            print(f"[ERROR] 인자를 해석하지 못했습니다: {e}")
+            print("  key=value 형태를 권장합니다. 예) customer_id=12345")
+            return
     else:
         tool_name = DEFAULT_TOOL
         arguments = DEFAULT_ARGUMENTS

@@ -1,0 +1,233 @@
+# 사내망 테스트 가이드
+
+사내망 PC에서 이 프로젝트를 실행해 사내 시스템 레코딩을 테스트하는 절차입니다.
+위에서부터 순서대로 진행하세요.
+
+---
+
+## 0. 시작 전 확인 (중요)
+
+### 0-1. 실제 시스템에 실제로 반영됩니다
+
+이 도구는 셀레늄으로 **진짜 브라우저를 조작**합니다. 레코딩에 발주 제출·저장·삭제 같은
+쓰기 동작이 들어 있으면 **사내 시스템에 실제로 반영됩니다.** 되돌릴 수 없습니다.
+
+- 처음에는 **조회성 레코딩**(검색/조회만 하는 것)으로 시작하세요.
+- 쓰기 동작을 테스트해야 한다면 **테스트 계정 / 테스트 데이터**로 하세요.
+
+### 0-2. 파이썬 버전 확인
+
+```
+python --version
+```
+
+**Python 3.13 (64비트)여야 합니다.** `wheels\` 폴더의 패키지 중 4개가 3.13 전용으로
+받아온 것이라, 버전이 다르면 오프라인 설치가 실패합니다.
+
+- 3.13이 아니면 → 사내망에서 인터넷이 되는지 확인 후 `pip install -r requirements.txt`를
+  그냥 시도하거나, 밖에서 해당 버전용 wheel을 다시 받아와야 합니다.
+
+### 0-3. 브라우저 버전 확인
+
+Edge 주소창에 `edge://version` 입력 → 버전 확인.
+
+**`131.0.2903.146`이어야 합니다.** 챙겨온 `drivers\msedgedriver.exe`가 이 버전 전용입니다.
+다르면 4단계 실행 시 `SessionNotCreatedException`이 납니다.
+
+### 0-4. 폴더 위치
+
+프로젝트 폴더를 **경로가 짧은 위치**(예: `C:\work\mcp_tool_generator`)에 두세요.
+경로가 깊으면 설치 중 Windows 260자 제한(`WinError 206`)에 걸립니다.
+
+---
+
+## 1. 패키지 설치 (오프라인)
+
+프로젝트 폴더에서:
+
+```
+python -m venv .venv
+```
+
+```
+.venv\Scripts\python.exe -m pip install --no-index --find-links=wheels -r requirements.txt
+```
+
+마지막에 `Successfully installed ... mcp-2.1.1 ... selenium-4.48.0 ...`이 나오면 성공입니다.
+
+> 이후 모든 명령은 `.venv\Scripts\python.exe`를 사용합니다. conda 환경을 쓰신다면
+> 그 환경의 python 경로로 바꿔서 쓰시면 됩니다.
+
+---
+
+## 2. 레코딩 JSON 배치
+
+사내 시스템 기준으로 만든 레코딩 JSON 파일을 `recordings\` 폴더에 넣습니다.
+
+파일명은 자유이며, JSON 안의 `id` 값이 곧 MCP tool 이름이 됩니다.
+
+확인해야 할 항목:
+
+| 항목 | 확인 내용 |
+|---|---|
+| `start_url` | 사내 시스템의 실제 URL로 되어 있는지 |
+| `id` | 영문/숫자/밑줄만 사용 (tool 이름이 됨) |
+| `description` | 10자 이상 |
+| 로그인 스텝 | **매 호출마다 `start_url`부터 새로 시작하므로, 로그인이 필요한 시스템이면 로그인 스텝이 레코딩에 포함되어 있어야 합니다** |
+
+---
+
+## 3. 드라이버 경로 설정
+
+**cmd 사용 시:**
+```
+set MCP_TOOL_GENERATOR_DRIVER_PATH=%CD%\drivers\msedgedriver.exe
+```
+
+**PowerShell 사용 시:**
+```
+$env:MCP_TOOL_GENERATOR_DRIVER_PATH = "$PWD\drivers\msedgedriver.exe"
+```
+
+> cmd와 PowerShell은 환경변수 문법이 다릅니다. PowerShell에서 `set VAR=값`을 쓰면
+> 적용되지 않으니 주의하세요.
+
+브라우저가 Chrome이라면 추가로 (기본값은 `edge`라 Edge를 쓰신다면 설정 불필요):
+
+```
+set MCP_TOOL_GENERATOR_BROWSER=chrome
+```
+```
+$env:MCP_TOOL_GENERATOR_BROWSER = "chrome"
+```
+
+---
+
+## 4. 등록 확인 + 실행 테스트
+
+같은 창에서(환경변수가 유지된 상태로) 실행합니다.
+
+**권장 방식 — `key=value`** (cmd/PowerShell 모두 동일하게 동작, 따옴표 문제 없음):
+
+```
+.venv\Scripts\python.exe scripts\mcp_e2e_test.py <레코딩id> 변수명=값 변수명2=값2
+```
+
+예시 — 레코딩 `id`가 `search_customer_info`이고 `variables`에 `customer_id`가 있다면:
+
+```
+.venv\Scripts\python.exe scripts\mcp_e2e_test.py search_customer_info customer_id=12345
+```
+
+**값에 공백·특수문자가 있으면 JSON 파일로:**
+
+`args.json` 파일을 만들어서 (UTF-8로 저장)
+```json
+{ "customer_id": "12345", "memo": "공백 있는 값" }
+```
+```
+.venv\Scripts\python.exe scripts\mcp_e2e_test.py search_customer_info args.json
+```
+
+> **PowerShell에서 `"{\"key\": \"값\"}"` 같은 JSON 문자열을 직접 넘기지 마세요.**
+> PowerShell이 따옴표를 제거해버려서 `JSONDecodeError`가 납니다. (cmd에서는 동작하지만
+> 위의 `key=value` 방식이 어느 셸에서든 안전합니다.)
+
+실행하면:
+
+1. `=== list_tools ===` 아래에 등록된 tool 목록이 출력됩니다.
+   여기에 내 레코딩이 안 보이면 → JSON이 검증에 실패한 것. `[WARN]` 메시지 확인.
+2. 브라우저 창이 실제로 뜨고 동작이 재생됩니다. (눈으로 확인 가능)
+3. 결과 JSON이 출력되고 마지막에 `RESULT: success` 또는 `RESULT: error`가 찍힙니다.
+
+> 창을 띄우지 않고 돌리려면 실행 전에 `set MCP_TOOL_GENERATOR_HEADLESS=1` (cmd) /
+> `$env:MCP_TOOL_GENERATOR_HEADLESS = "1"` (PowerShell). 첫 테스트는 창을 띄워서
+> 눈으로 확인하시는 것을 권합니다.
+
+---
+
+## 5. 결과 판독법
+
+출력된 JSON에서 볼 곳:
+
+| 필드 | 의미 |
+|---|---|
+| `status` | `success` = 전 스텝 완료 / `error` = 중간에 실패 |
+| `step_results[]` | 위에서부터 훑어서 `"status": "error"`가 처음 나오는 곳이 실패 지점 |
+| `extracted` | `extract` 스텝으로 읽어온 값. 기대한 값이 맞는지 확인 |
+| `error.error_type` | 실패 원인 분류 |
+| `error.attempted_selectors` | 시도했지만 못 찾은 셀렉터 목록 |
+| `screenshot_path` | **성공/실패 모두 스크린샷이 남습니다.** 이 경로의 png를 열어보면 그 순간 화면을 볼 수 있습니다 |
+
+`status`가 `success`여도 `extracted` 값이 이상하면(빈 문자열 등) 논리적으로는 실패입니다.
+스크린샷을 같이 확인하세요.
+
+---
+
+## 6. 문제 해결
+
+### `SessionNotCreatedException`
+브라우저와 드라이버 버전 불일치입니다. 아래 둘 중 하나의 메시지로 나타납니다:
+
+```
+This version of Microsoft Edge WebDriver only supports Microsoft Edge version 131
+Current browser version is 152.0.xxxx.xx
+```
+```
+Microsoft Edge failed to start: exited normally.
+(The process started from msedge location ... is no longer running,
+ so msedgedriver is assuming that msedge has crashed.)
+```
+
+`edge://version`으로 실제 브라우저 버전을 확인하세요. 챙겨온 드라이버는
+`131.0.2903.146` 전용입니다. 버전이 다르면 그 버전에 맞는 드라이버를
+`https://msedgedriver.microsoft.com/<버전>/edgedriver_win64.zip` 에서 받아야 합니다
+(사내망에서 이 주소가 막혀 있다면 외부에서 받아 다시 들고 와야 합니다).
+
+### `selector_not_found`
+셀렉터가 페이지에서 안 잡힌 경우입니다. `error.screenshot_path`의 스크린샷을 먼저 여세요.
+
+- 로그인 화면에 멈춰 있다면 → 로그인 스텝이 레코딩에 없거나 실패한 것
+- 원하는 화면인데 못 찾는다면 → 셀렉터가 실제 DOM과 안 맞는 것 (F12로 확인)
+- 화면이 아직 로딩 중이라면 → 해당 스텝의 `wait_after.timeout_ms`를 늘리기
+
+### `WinError 206` (설치 중)
+경로가 너무 깁니다. 프로젝트를 `C:\work\` 같은 짧은 경로로 옮기고 재시도하세요.
+
+### tool 목록에 내 레코딩이 안 보임
+JSON 검증 실패입니다. 실행 시 출력되는 `[WARN]` 메시지에 어느 파일의 어떤 필드가
+잘못됐는지 나옵니다.
+
+### 브라우저는 뜨는데 페이지가 안 열림 / 인증서 경고
+사내 시스템이 자체 서명 인증서를 쓰는 경우일 수 있습니다.
+해당 인증서를 OS/브라우저 신뢰 저장소에 설치하는 것이 정석입니다.
+
+---
+
+## 7. 현재 지원하지 않는 것 (막히면 참고)
+
+아래는 지금 인터프리터가 처리하지 못합니다. 사내 시스템이 이 방식을 쓰면 별도 개발이 필요합니다.
+
+- **iframe 안의 요소** — 최상위 문서에서만 찾습니다
+- **네이티브 팝업** — `alert()` / `confirm()` / 파일 업로드 다이얼로그
+- **새 창·새 탭으로 뜨는 로그인** (팝업형 SSO 등)
+
+막히면 어느 지점에서 어떤 화면이었는지(스크린샷) 기록해두시면 이후 대응이 쉽습니다.
+
+---
+
+## 부록: 지원 액션 목록
+
+레코딩 JSON의 `action`에 쓸 수 있는 값입니다.
+
+| action | 동작 | 필요한 필드 |
+|---|---|---|
+| `input` | 텍스트 입력 | `target`, `value` |
+| `click` | 클릭 | `target` |
+| `select` | 드롭다운 선택 | `target`, `value` |
+| `navigate` | URL 이동 | `value` (이동할 주소) |
+| `wait` | 대기 | `target` 있으면 그 요소를 기다림, 없으면 시간만큼 대기 |
+| `extract` | 화면에서 값 읽기 | `target`, `extract_as` (결과 key), `extract_attribute` (선택) |
+
+셀렉터는 `target.selectors` 배열에 여러 개 넣으면 **앞에서부터 순서대로 시도**해서
+먼저 잡히는 것을 사용합니다 (css/xpath 혼용 가능).
