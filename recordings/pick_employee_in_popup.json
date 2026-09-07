@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "id": "pick_employee_in_popup",
+  "name": "Pick Employee In Popup Window",
+  "description": "담당자 검색 팝업 창을 열어 사번으로 검색하고 선택한 뒤, 메인 창에 반영된 담당자명을 확인합니다.",
+  "start_url": "http://localhost:8000/new_window.html",
+  "variables": {
+    "employee_id": {
+      "type": "string",
+      "required": true,
+      "description": "검색할 담당자 사번 (예: E1024)"
+    }
+  },
+  "steps": [
+    {
+      "id": "open_picker",
+      "action": "click",
+      "target": {
+        "selectors": [{ "type": "css", "value": "#open-picker-btn" }]
+      },
+      "wait_after": { "timeout_ms": 5000 }
+    },
+    {
+      "id": "switch_to_picker",
+      "action": "switch_window",
+      "window_target": "new",
+      "wait_after": { "timeout_ms": 8000 }
+    },
+    {
+      "id": "enter_employee_id",
+      "action": "input",
+      "target": {
+        "selectors": [{ "type": "css", "value": "#emp-id-input" }]
+      },
+      "value": { "type": "variable", "name": "employee_id" },
+      "wait_after": { "timeout_ms": 5000 }
+    },
+    {
+      "id": "click_employee_search",
+      "action": "click",
+      "target": {
+        "selectors": [{ "type": "css", "value": "#emp-search-btn" }]
+      },
+      "wait_after": { "timeout_ms": 5000 }
+    },
+    {
+      "id": "read_employee_name",
+      "action": "extract",
+      "target": {
+        "selectors": [{ "type": "css", "value": "#emp-name" }]
+      },
+      "extract_as": "employee_name",
+      "wait_after": { "timeout_ms": 5000 }
+    },
+    {
+      "id": "click_apply",
+      "action": "click",
+      "target": {
+        "selectors": [{ "type": "css", "value": "#emp-apply-btn" }]
+      },
+      "wait_after": { "timeout_ms": 5000 }
+    },
+    {
+      "id": "switch_back_to_main",
+      "action": "switch_window",
+      "window_target": "original",
+      "wait_after": { "timeout_ms": 8000 }
+    },
+    {
+      "id": "read_selected_name",
+      "action": "extract",
+      "target": {
+        "selectors": [{ "type": "css", "value": "#selected-name" }]
+      },
+      "extract_as": "selected_name",
+      "wait_after": { "timeout_ms": 8000 }
+    }
+  ]
+}

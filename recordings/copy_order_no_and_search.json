@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "id": "copy_order_no_and_search",
+  "name": "Copy Order Number And Search",
+  "description": "화면에 표시된 발주번호를 복사해서 조회 입력란에 붙여넣고 조회합니다. 발주번호를 사람이 직접 입력하지 않아도 됩니다.",
+  "start_url": "http://localhost:8000/copy_paste.html",
+  "variables": {},
+  "steps": [
+    {
+      "id": "copy_order_no",
+      "action": "extract",
+      "target": {
+        "selectors": [{ "type": "css", "value": "#order-no" }]
+      },
+      "extract_as": "order_no",
+      "wait_after": { "timeout_ms": 5000 }
+    },
+    {
+      "id": "click_copy_button",
+      "action": "click",
+      "target": {
+        "selectors": [{ "type": "css", "value": "#copy-btn" }]
+      },
+      "wait_after": { "timeout_ms": 5000 }
+    },
+    {
+      "id": "paste_order_no",
+      "action": "input",
+      "target": {
+        "selectors": [{ "type": "css", "value": "#search-input" }]
+      },
+      "value": { "type": "extracted", "name": "order_no" },
+      "wait_after": { "timeout_ms": 5000 }
+    },
+    {
+      "id": "click_search",
+      "action": "click",
+      "target": {
+        "selectors": [{ "type": "css", "value": "#search-btn" }]
+      },
+      "wait_after": { "timeout_ms": 5000 }
+    },
+    {
+      "id": "read_search_result",
+      "action": "extract",
+      "target": {
+        "selectors": [{ "type": "css", "value": "#search-result" }]
+      },
+      "extract_as": "search_result",
+      "wait_after": { "timeout_ms": 5000 }
+    }
+  ]
+}
