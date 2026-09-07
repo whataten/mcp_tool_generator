@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Internal System Login with Confirm (Test Fixture)</title>
+</head>
+<body>
+  <h1>사내 시스템 로그인 - 확인창 (테스트용)</h1>
+
+  <div id="login-form">
+    <div>
+      <label>아이디: <input id="username-input" type="text" /></label>
+    </div>
+    <div>
+      <label>비밀번호: <input id="password-input" type="password" /></label>
+    </div>
+    <div>
+      <button id="login-btn">로그인</button>
+    </div>
+    <div>
+      <span id="cancel-notice"></span>
+    </div>
+  </div>
+
+  <div id="home" style="display: none;">
+    <h2 id="welcome"></h2>
+    <span id="login-status">로그인 완료</span>
+  </div>
+
+  <script>
+    document.getElementById("login-btn").addEventListener("click", function () {
+      var user = document.getElementById("username-input").value;
+
+      // 확인/취소가 있는 confirm 창: 누른 버튼에 따라 동작이 갈린다.
+      var ok = confirm("이 계정으로 로그인하시겠습니까?");
+
+      if (!ok) {
+        document.getElementById("cancel-notice").textContent = "로그인이 취소되었습니다";
+        return;
+      }
+
+      setTimeout(function () {
+        document.getElementById("login-form").style.display = "none";
+        document.getElementById("welcome").textContent = user + "님 환영합니다";
+        document.getElementById("home").style.display = "block";
+      }, 1200);
+    });
+  </script>
+</body>
+</html>

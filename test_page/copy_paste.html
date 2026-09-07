@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Copy and Paste (Test Fixture)</title>
+</head>
+<body>
+  <h1>발주번호 복사 후 조회 (테스트용)</h1>
+
+  <div>
+    <h2>1. 방금 생성된 발주</h2>
+    <span>발주번호: </span><span id="order-no">PO-2026-000317</span>
+    <button id="copy-btn">복사</button>
+    <span id="copy-status"></span>
+  </div>
+
+  <hr />
+
+  <div>
+    <h2>2. 발주 조회</h2>
+    <label>발주번호: <input id="search-input" type="text" /></label>
+    <button id="search-btn">조회</button>
+  </div>
+
+  <div>
+    <h2>조회 결과</h2>
+    <span id="search-result"></span>
+  </div>
+
+  <script>
+    var ORDERS = {
+      "PO-2026-000317": "승인 대기 / 자재팀 / 3건"
+    };
+
+    document.getElementById("copy-btn").addEventListener("click", function () {
+      document.getElementById("copy-status").textContent = "복사됨";
+    });
+
+    document.getElementById("search-btn").addEventListener("click", function () {
+      var no = document.getElementById("search-input").value;
+      document.getElementById("search-result").textContent =
+        ORDERS[no] || "해당 발주번호를 찾을 수 없습니다";
+    });
+  </script>
+</body>
+</html>

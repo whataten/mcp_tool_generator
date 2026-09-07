@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "id": "login_with_confirm",
+  "name": "Login With Confirm Dialog",
+  "description": "사내 시스템에 로그인합니다. 로그인 버튼을 누르면 확인/취소 창이 뜨며, 확인을 눌러야 로그인이 진행됩니다.",
+  "start_url": "http://localhost:8000/login_confirm.html",
+  "variables": {
+    "username": {
+      "type": "string",
+      "required": true,
+      "description": "사내 시스템 로그인 아이디"
+    },
+    "password": {
+      "type": "secret",
+      "required": true,
+      "description": "사내 시스템 로그인 비밀번호"
+    }
+  },
+  "steps": [
+    {
+      "id": "enter_username",
+      "action": "input",
+      "target": {
+        "selectors": [{ "type": "css", "value": "#username-input" }]
+      },
+      "value": { "type": "variable", "name": "username" },
+      "wait_after": { "timeout_ms": 5000 }
+    },
+    {
+      "id": "enter_password",
+      "action": "input",
+      "target": {
+        "selectors": [{ "type": "css", "value": "#password-input" }]
+      },
+      "value": { "type": "variable", "name": "password" },
+      "wait_after": { "timeout_ms": 5000 }
+    },
+    {
+      "id": "click_login",
+      "action": "click",
+      "target": {
+        "selectors": [{ "type": "css", "value": "#login-btn" }]
+      },
+      "wait_after": { "timeout_ms": 5000 }
+    },
+    {
+      "id": "confirm_login",
+      "action": "alert",
+      "alert_action": "accept",
+      "extract_as": "confirm_question",
+      "wait_after": { "timeout_ms": 5000 }
+    },
+    {
+      "id": "read_welcome",
+      "action": "extract",
+      "target": {
+        "selectors": [{ "type": "css", "value": "#welcome" }]
+      },
+      "extract_as": "welcome_message",
+      "wait_after": { "timeout_ms": 8000 }
+    }
+  ]
+}

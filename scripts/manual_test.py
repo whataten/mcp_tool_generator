@@ -5,6 +5,10 @@
 import os
 import sys
 
+# Repeated test runs would otherwise leave a browser window behind each time.
+# Must be set before config is imported (below) for it to take effect.
+os.environ.setdefault("MCP_TOOL_GENERATOR_KEEP_BROWSER", "0")
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from interpreter import RecordingInterpreter

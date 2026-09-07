@@ -2,6 +2,7 @@ import time
 
 from selenium.common.exceptions import (
     ElementClickInterceptedException,
+    NoAlertPresentException,
     StaleElementReferenceException,
     TimeoutException,
     WebDriverException,
@@ -22,7 +23,13 @@ def _classify_error(exc: Exception, step) -> ErrorDetail:
             error_type="selector_not_found",
             attempted_selectors=[{"type": s.type.value, "value": s.value} for s in exc.selectors],
         )
-    if isinstance(exc, TimeoutException):
+    if isinstance(exc, sr.WindowNotFoundError):
+        error_type = "window_not_found"
+    elif isinstance(exc, sr.UnhandledAlertError):
+        error_type = "alert_open"
+    elif isinstance(exc, NoAlertPresentException):
+        error_type = "alert_not_found"
+    elif isinstance(exc, TimeoutException):
         error_type = "timeout"
     elif isinstance(exc, ElementClickInterceptedException):
         error_type = "click_intercepted"
@@ -54,12 +61,13 @@ class RecordingInterpreter:
         driver = sr.new_driver()
         step_results: list[StepResult] = []
         extracted: dict = {}
+        alerts_handled: list[str] = []
         try:
             driver.get(self.recording.start_url)
             for step in self.recording.steps:
                 try:
                     t0 = time.monotonic()
-                    extra = sr.execute_step(driver, step, bound_vars)
+                    extra = sr.execute_step(driver, step, bound_vars, extracted, alerts_handled)
                     step_results.append(
                         StepResult(
                             step_id=step.id,
@@ -86,8 +94,12 @@ class RecordingInterpreter:
                         step_results=step_results,
                         extracted=extracted,
                         error=err,
+                        alerts_handled=alerts_handled,
                     )
 
+            # The last step has usually just submitted something, so let the
+            # browser land on the resulting page before capturing it.
+            sr.wait_for_page_settled(driver)
             screenshot_path = sr.capture_screenshot(driver, self.screenshot_dir, self.recording.id, "final")
             return ToolResult(
                 status="success",
@@ -95,9 +107,11 @@ class RecordingInterpreter:
                 step_results=step_results,
                 extracted=extracted,
                 screenshot_path=screenshot_path,
+                alerts_handled=alerts_handled,
             )
         finally:
-            try:
-                driver.quit()
-            except Exception:
-                pass
+            if not config.KEEP_BROWSER_OPEN:
+                try:
+                    driver.quit()
+                except Exception:
+                    pass

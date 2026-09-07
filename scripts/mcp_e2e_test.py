@@ -75,6 +75,9 @@ async def main():
     env = dict(os.environ)
     env.setdefault("MCP_TOOL_GENERATOR_BROWSER", "edge")
     env.setdefault("MCP_TOOL_GENERATOR_HEADLESS", "0" if custom else "1")
+    # Don't leave a window behind on every test run (the server's own default
+    # is to keep it open). Override by setting this before running.
+    env.setdefault("MCP_TOOL_GENERATOR_KEEP_BROWSER", "0")
 
     params = StdioServerParameters(
         command=sys.executable,

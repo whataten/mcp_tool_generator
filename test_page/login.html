@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Internal System Login (Test Fixture)</title>
+</head>
+<body>
+  <h1>사내 시스템 로그인 (테스트용)</h1>
+
+  <div id="login-form">
+    <div>
+      <label>아이디: <input id="username-input" type="text" /></label>
+    </div>
+    <div>
+      <label>비밀번호: <input id="password-input" type="password" /></label>
+    </div>
+    <div>
+      <button id="login-btn">로그인</button>
+    </div>
+  </div>
+
+  <div id="home" style="display: none;">
+    <h2 id="welcome"></h2>
+    <span id="login-status">로그인 완료</span>
+  </div>
+
+  <script>
+    document.getElementById("login-btn").addEventListener("click", function () {
+      var user = document.getElementById("username-input").value;
+
+      // 사내 시스템처럼 로그인 직후 안내 alert를 띄운다.
+      alert("비밀번호 만료가 30일 남았습니다.");
+
+      // alert를 닫은 뒤에도 화면 전환은 조금 뒤에 끝난다 —
+      // 스크린샷을 너무 일찍 찍으면 로그인 화면이 찍히는 상황을 재현.
+      setTimeout(function () {
+        document.getElementById("login-form").style.display = "none";
+        document.getElementById("welcome").textContent = user + "님 환영합니다";
+        document.getElementById("home").style.display = "block";
+      }, 1200);
+    });
+  </script>
+</body>
+</html>

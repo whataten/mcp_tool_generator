@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Employee Picker (Test Fixture)</title>
+</head>
+<body>
+  <h1>담당자 검색 - 팝업 창</h1>
+
+  <div>
+    <label>사번: <input id="emp-id-input" type="text" /></label>
+    <button id="emp-search-btn">검색</button>
+  </div>
+
+  <div>
+    <span>검색 결과: </span><span id="emp-name"></span>
+  </div>
+
+  <div>
+    <button id="emp-apply-btn">선택 완료</button>
+  </div>
+
+  <script>
+    var EMPLOYEES = {
+      "E1024": "김민수 (자재팀)",
+      "E2048": "박서연 (구매팀)"
+    };
+
+    document.getElementById("emp-search-btn").addEventListener("click", function () {
+      var id = document.getElementById("emp-id-input").value;
+      document.getElementById("emp-name").textContent =
+        EMPLOYEES[id] || "(사번을 찾을 수 없습니다)";
+    });
+
+    document.getElementById("emp-apply-btn").addEventListener("click", function () {
+      var name = document.getElementById("emp-name").textContent;
+      if (window.opener && window.opener.applyPicked) {
+        window.opener.applyPicked(name);
+      }
+      window.close();
+    });
+  </script>
+</body>
+</html>

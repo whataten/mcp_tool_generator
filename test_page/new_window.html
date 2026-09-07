@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Main Window (Test Fixture)</title>
+</head>
+<body>
+  <h1>담당자 선택 (테스트용) - 메인 창</h1>
+
+  <div>
+    <button id="open-picker-btn">담당자 검색 창 열기</button>
+  </div>
+
+  <div>
+    <span>선택된 담당자: </span><span id="selected-name"></span>
+  </div>
+
+  <script>
+    document.getElementById("open-picker-btn").addEventListener("click", function () {
+      window.open("picker_window.html", "picker", "width=500,height=400");
+    });
+
+    // 새 창에서 호출해 메인 창에 결과를 돌려주는 함수
+    window.applyPicked = function (name) {
+      document.getElementById("selected-name").textContent = name;
+    };
+  </script>
+</body>
+</html>

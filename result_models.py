@@ -22,6 +22,9 @@ class ErrorDetail(BaseModel):
         "page_crash",
         "webdriver_error",
         "invalid_arguments",
+        "alert_open",
+        "alert_not_found",
+        "window_not_found",
         "unknown",
     ]
     attempted_selectors: Optional[list[dict]] = None
@@ -36,3 +39,5 @@ class ToolResult(BaseModel):
     extracted: dict[str, Any] = {}
     error: Optional[ErrorDetail] = None
     screenshot_path: Optional[str] = None
+    # Text of any javascript dialogs that were closed during the run, in order.
+    alerts_handled: list[str] = []
