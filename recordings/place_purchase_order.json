@@ -18,8 +18,8 @@
     "note": {
       "type": "string",
       "required": false,
-      "description": "발주 메모 (선택)",
-      "default": ""
+      "default": "",
+      "description": "발주 메모 (선택)"
     }
   },
   "steps": [
@@ -27,10 +27,7 @@
       "id": "enter_sku",
       "action": "input",
       "target": {
-        "selectors": [
-          { "type": "css", "value": "#sku-input" },
-          { "type": "xpath", "value": "//input[@name='sku']" }
-        ]
+        "selectors": [{ "type": "css", "value": "#sku-input" }]
       },
       "value": { "type": "variable", "name": "sku" },
       "wait_after": { "timeout_ms": 5000 }
@@ -38,54 +35,50 @@
     {
       "id": "click_search",
       "action": "click",
-      "target": {
-        "selectors": [{ "type": "css", "value": "#search-btn" }]
-      },
+      "target": { "selectors": [{ "type": "css", "value": "#search-btn" }] },
       "wait_after": { "timeout_ms": 5000 }
     },
     {
       "id": "read_item_name",
       "action": "extract",
-      "target": {
-        "selectors": [{ "type": "css", "value": "#item-name" }]
-      },
+      "target": { "selectors": [{ "type": "css", "value": "#item-name" }] },
+      "options": { "extract_type": "text" },
       "extract_as": "item_name",
       "wait_after": { "timeout_ms": 5000 }
     },
     {
       "id": "enter_quantity",
       "action": "input",
-      "target": {
-        "selectors": [{ "type": "css", "value": "#quantity-input" }]
-      },
+      "target": { "selectors": [{ "type": "css", "value": "#quantity-input" }] },
       "value": { "type": "variable", "name": "quantity" },
       "wait_after": { "timeout_ms": 5000 }
     },
     {
       "id": "enter_note",
       "action": "input",
-      "target": {
-        "selectors": [{ "type": "css", "value": "#note-input" }]
-      },
+      "target": { "selectors": [{ "type": "css", "value": "#note-input" }] },
       "value": { "type": "variable", "name": "note" },
       "wait_after": { "timeout_ms": 3000 }
     },
     {
       "id": "submit_order",
       "action": "click",
-      "target": {
-        "selectors": [{ "type": "css", "value": "#submit-order-btn" }]
-      },
+      "target": { "selectors": [{ "type": "css", "value": "#submit-order-btn" }] },
       "wait_after": { "timeout_ms": 8000 }
     },
     {
       "id": "read_confirmation",
       "action": "extract",
-      "target": {
-        "selectors": [{ "type": "css", "value": "#order-confirmation" }]
-      },
+      "target": { "selectors": [{ "type": "css", "value": "#order-confirmation" }] },
+      "options": { "extract_type": "text" },
       "extract_as": "confirmation_message",
+      "wait_before": {
+        "timeout_ms": 8000,
+        "wait_until": "selector_visible",
+        "target": { "selectors": [{ "type": "css", "value": "#order-confirmation" }] }
+      },
       "wait_after": { "timeout_ms": 5000 }
     }
-  ]
+  ],
+  "outputs": ["item_name", "confirmation_message"]
 }

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Mail Compose (Test Fixture)</title>
+</head>
+<body>
+  <h1>메일 쓰기 - 팝업 창</h1>
+
+  <div>
+    <label>받는 사람: <input id="mail-to" type="text" /></label>
+  </div>
+  <div>
+    <label>제목: <input id="mail-subject" type="text" /></label>
+  </div>
+  <div>
+    <label>본문: <textarea id="mail-body" rows="5" cols="40"></textarea></label>
+  </div>
+  <div>
+    <label>중요도:
+      <select id="mail-priority">
+        <option value="normal">보통</option>
+        <option value="high">높음</option>
+      </select>
+    </label>
+  </div>
+  <div>
+    <button id="mail-send-btn">보내기</button>
+  </div>
+
+  <script>
+    document.getElementById("mail-send-btn").addEventListener("click", function () {
+      var subject = document.getElementById("mail-subject").value;
+      if (!confirm("메일을 발송하시겠습니까?")) {
+        return;
+      }
+      if (window.opener && window.opener.applySent) {
+        window.opener.applySent(subject);
+      }
+      window.close();
+    });
+  </script>
+</body>
+</html>

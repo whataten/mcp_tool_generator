@@ -10,44 +10,92 @@
       "id": "copy_order_no",
       "action": "extract",
       "target": {
-        "selectors": [{ "type": "css", "value": "#order-no" }]
+        "selectors": [
+          {
+            "type": "css",
+            "value": "#order-no"
+          }
+        ]
+      },
+      "options": {
+        "extract_type": "text"
       },
       "extract_as": "order_no",
-      "wait_after": { "timeout_ms": 5000 }
+      "wait_after": {
+        "timeout_ms": 5000
+      }
     },
     {
       "id": "click_copy_button",
       "action": "click",
       "target": {
-        "selectors": [{ "type": "css", "value": "#copy-btn" }]
+        "selectors": [
+          {
+            "type": "css",
+            "value": "#copy-btn"
+          }
+        ]
       },
-      "wait_after": { "timeout_ms": 5000 }
+      "wait_after": {
+        "timeout_ms": 5000
+      }
     },
     {
       "id": "paste_order_no",
       "action": "input",
       "target": {
-        "selectors": [{ "type": "css", "value": "#search-input" }]
+        "selectors": [
+          {
+            "type": "css",
+            "value": "#search-input"
+          }
+        ]
       },
-      "value": { "type": "extracted", "name": "order_no" },
-      "wait_after": { "timeout_ms": 5000 }
+      "value": {
+        "type": "extracted_ref",
+        "name": "order_no"
+      },
+      "wait_after": {
+        "timeout_ms": 5000
+      }
     },
     {
       "id": "click_search",
       "action": "click",
       "target": {
-        "selectors": [{ "type": "css", "value": "#search-btn" }]
+        "selectors": [
+          {
+            "type": "css",
+            "value": "#search-btn"
+          }
+        ]
       },
-      "wait_after": { "timeout_ms": 5000 }
+      "wait_after": {
+        "timeout_ms": 5000
+      }
     },
     {
       "id": "read_search_result",
       "action": "extract",
       "target": {
-        "selectors": [{ "type": "css", "value": "#search-result" }]
+        "selectors": [
+          {
+            "type": "css",
+            "value": "#search-result"
+          }
+        ]
+      },
+      "options": {
+        "extract_type": "text"
       },
       "extract_as": "search_result",
-      "wait_after": { "timeout_ms": 5000 }
+      "wait_after": {
+        "timeout_ms": 5000
+      }
     }
+  ],
+  "outputs": [
+    "order_no",
+    "search_result"
   ]
 }

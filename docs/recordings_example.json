@@ -1,0 +1,237 @@
+{
+    "schema_version": 1,
+    "id": "recorded_12e1734e",
+    "name": "Recorded Scenario",
+    "description": "http://swp.posco.net/ 에서 녹화된 사용자 액션 시나리오",
+    "start_url": "http://swp.posco.net/",
+    "variables": {},
+    "steps": [
+        {
+            "id": "step_001",
+            "action": "click",
+            "target": {
+                "selectors": [
+                    {
+                        "type": "css",
+                        "value": "#scheme"
+                    },
+                    {
+                        "type": "css",
+                        "value": "a#scheme"
+                    }
+                ]
+            },
+            "wait_after": {
+                "timeout_ms": 3000
+            }
+        },
+        {
+            "id": "step_002",
+            "action": "window_open_call",
+            "options": {
+                "message": "Page.windowOpen (native CDP event)",
+                "options": {
+                    "url": "http://swpmailict.posco.net/swpmail/ifetc.nsf/mailopen?openagent&LANG=ko&TIMEZONE=+540&comp_cd=01&ptd=",
+                    "windowName": "_01_301095_532339",
+                    "windowFeatures": [
+                        "left=0",
+                        "top=0",
+                        "width=1920",
+                        "height=974",
+                        "resizable"
+                    ],
+                    "userGesture": true
+                }
+            }
+        },
+        {
+            "id": "step_003",
+            "action": "open_tab",
+            "extract_as": "tab_8",
+            "wait_after": {
+                "timeout_ms": 3000
+            }
+        },
+        {
+            "id": "step_004",
+            "action": "click",
+            "target": {
+                "selectors": [
+                    {
+                        "type": "css",
+                        "value": "li#\\35 32339 > a > span > img"
+                    }
+                ]
+            },
+            "wait_after": {
+                "timeout_ms": 3000
+            }
+        },
+        {
+            "id": "step_005",
+            "action": "window_open_call",
+            "options": {
+                "message": "window.open() called",
+                "options": {
+                    "url": "http://swpmailict.posco.net/swpmail/ifetc.nsf/mailopen?openagent&LANG=ko&TIMEZONE=+540&comp_cd=01&ptd=",
+                    "name": "_01_301095_532339",
+                    "features": "width=1920px,height=974px,top=0,left=0,location=yes,menubar=yes,resizable=yes,scrollbars=yes,status=no,titlebar=yes,toolbar=yes",
+                    "opened": true,
+                    "blocked": false,
+                    "error": null
+                }
+            }
+        },
+        {
+            "id": "step_006",
+            "action": "sso_popup_recover",
+            "options": {
+                "message": "launcherWindowOpen() replaced with direct window.open()",
+                "options": {
+                    "popupUrl": "http://swpmailict.posco.net/swpmail/ifetc.nsf/mailopen?openagent&LANG=ko&TIMEZONE=+540&comp_cd=01&ptd=",
+                    "popupName": "_01_301095_532339"
+                }
+            }
+        },
+        {
+            "id": "step_007",
+            "action": "window_open_call",
+            "options": {
+                "message": "Page.windowOpen (native CDP event)",
+                "options": {
+                    "url": "http://pcfma04.posco.net/01/mail5/301095.nsf/Memo?openform&opentype=popup",
+                    "windowName": "_blank",
+                    "windowFeatures": [
+                        "left=315",
+                        "top=103",
+                        "width=1290",
+                        "height=826",
+                        "resizable"
+                    ],
+                    "userGesture": true
+                }
+            }
+        },
+        {
+            "id": "step_008",
+            "action": "open_tab",
+            "extract_as": "tab_9",
+            "wait_after": {
+                "timeout_ms": 3000
+            }
+        },
+        {
+            "id": "step_009",
+            "action": "focus",
+            "target": {
+                "selectors": [
+                    {
+                        "type": "css",
+                        "value": "div#Lnb > div > a"
+                    },
+                    {
+                        "type": "text",
+                        "value": "메일쓰기",
+                        "exact": true
+                    }
+                ]
+            },
+            "wait_after": {
+                "timeout_ms": 3000
+            }
+        },
+        {
+            "id": "step_010",
+            "action": "click",
+            "target": {
+                "selectors": [
+                    {
+                        "type": "css",
+                        "value": "div#Lnb > div > a"
+                    },
+                    {
+                        "type": "text",
+                        "value": "메일쓰기",
+                        "exact": true
+                    }
+                ]
+            },
+            "wait_after": {
+                "timeout_ms": 3000
+            }
+        },
+        {
+            "id": "step_011",
+            "action": "window_open_call",
+            "options": {
+                "message": "window.open() called",
+                "options": {
+                    "url": "/01/mail5/301095.nsf/Memo?openform&opentype=popup",
+                    "name": "",
+                    "features": "resizable=yes,scrollbars=yes,left=315,top=103,width=1290,height=826",
+                    "opened": true,
+                    "blocked": false,
+                    "error": null
+                }
+            }
+        },
+        {
+            "id": "step_012",
+            "action": "close_tab",
+            "options": {
+                "tab_ref": "tab_9"
+            }
+        },
+        {
+            "id": "step_013",
+            "action": "focus",
+            "target": {
+                "selectors": [
+                    {
+                        "type": "css",
+                        "value": "div#Lnb > div > a"
+                    },
+                    {
+                        "type": "text",
+                        "value": "메일쓰기",
+                        "exact": true
+                    }
+                ]
+            },
+            "wait_after": {
+                "timeout_ms": 3000
+            }
+        },
+        {
+            "id": "step_014",
+            "action": "blur",
+            "target": {
+                "selectors": [
+                    {
+                        "type": "css",
+                        "value": "div#Lnb > div > a"
+                    },
+                    {
+                        "type": "text",
+                        "value": "메일쓰기",
+                        "exact": true
+                    }
+                ]
+            },
+            "wait_after": {
+                "timeout_ms": 3000
+            }
+        }
+    ],
+    "outputs": [
+        "tab_8",
+        "tab_9"
+    ],
+    "metadata": {
+        "recorded_at": "2026-09-23T10:44:01.030171+09:00",
+        "finished_at": "2026-09-23T10:44:20.138839+09:00",
+        "raw_event_count": 14,
+        "recorder": "selenium-streamlit-recorder/0.1",
+        "dialog_messages": {}
+    }
+}

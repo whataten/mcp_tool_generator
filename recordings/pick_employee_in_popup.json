@@ -14,66 +14,148 @@
   "steps": [
     {
       "id": "open_picker",
-      "action": "click",
+      "action": "open_tab",
       "target": {
-        "selectors": [{ "type": "css", "value": "#open-picker-btn" }]
+        "selectors": [
+          {
+            "type": "css",
+            "value": "#open-picker-btn"
+          }
+        ]
       },
-      "wait_after": { "timeout_ms": 5000 }
+      "options": {
+        "trigger": "click_target"
+      },
+      "extract_as": "picker_tab",
+      "wait_after": {
+        "timeout_ms": 8000
+      }
     },
     {
       "id": "switch_to_picker",
-      "action": "switch_window",
-      "window_target": "new",
-      "wait_after": { "timeout_ms": 8000 }
+      "action": "switch_tab",
+      "options": {
+        "tab_ref": {
+          "type": "extracted_ref",
+          "name": "picker_tab"
+        }
+      },
+      "wait_after": {
+        "timeout_ms": 5000
+      }
     },
     {
       "id": "enter_employee_id",
       "action": "input",
       "target": {
-        "selectors": [{ "type": "css", "value": "#emp-id-input" }]
+        "selectors": [
+          {
+            "type": "css",
+            "value": "#emp-id-input"
+          }
+        ]
       },
-      "value": { "type": "variable", "name": "employee_id" },
-      "wait_after": { "timeout_ms": 5000 }
+      "value": {
+        "type": "variable",
+        "name": "employee_id"
+      },
+      "wait_after": {
+        "timeout_ms": 5000
+      }
     },
     {
       "id": "click_employee_search",
       "action": "click",
       "target": {
-        "selectors": [{ "type": "css", "value": "#emp-search-btn" }]
+        "selectors": [
+          {
+            "type": "css",
+            "value": "#emp-search-btn"
+          }
+        ]
       },
-      "wait_after": { "timeout_ms": 5000 }
+      "wait_after": {
+        "timeout_ms": 5000
+      }
     },
     {
       "id": "read_employee_name",
       "action": "extract",
       "target": {
-        "selectors": [{ "type": "css", "value": "#emp-name" }]
+        "selectors": [
+          {
+            "type": "css",
+            "value": "#emp-name"
+          }
+        ]
+      },
+      "options": {
+        "extract_type": "text"
       },
       "extract_as": "employee_name",
-      "wait_after": { "timeout_ms": 5000 }
+      "wait_after": {
+        "timeout_ms": 5000
+      }
     },
     {
       "id": "click_apply",
       "action": "click",
       "target": {
-        "selectors": [{ "type": "css", "value": "#emp-apply-btn" }]
+        "selectors": [
+          {
+            "type": "css",
+            "value": "#emp-apply-btn"
+          }
+        ]
       },
-      "wait_after": { "timeout_ms": 5000 }
+      "wait_after": {
+        "timeout_ms": 5000
+      }
     },
     {
       "id": "switch_back_to_main",
-      "action": "switch_window",
-      "window_target": "original",
-      "wait_after": { "timeout_ms": 8000 }
+      "action": "switch_tab",
+      "options": {
+        "tab_ref": "opener"
+      },
+      "wait_after": {
+        "timeout_ms": 8000
+      }
     },
     {
       "id": "read_selected_name",
       "action": "extract",
       "target": {
-        "selectors": [{ "type": "css", "value": "#selected-name" }]
+        "selectors": [
+          {
+            "type": "css",
+            "value": "#selected-name"
+          }
+        ]
+      },
+      "options": {
+        "extract_type": "text"
       },
       "extract_as": "selected_name",
-      "wait_after": { "timeout_ms": 8000 }
+      "wait_before": {
+        "timeout_ms": 8000,
+        "wait_until": "selector_visible",
+        "target": {
+          "selectors": [
+            {
+              "type": "css",
+              "value": "#selected-name"
+            }
+          ]
+        }
+      },
+      "wait_after": {
+        "timeout_ms": 5000
+      }
     }
+  ],
+  "outputs": [
+    "employee_name",
+    "selected_name"
   ]
 }
