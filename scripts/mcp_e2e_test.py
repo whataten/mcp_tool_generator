@@ -106,8 +106,10 @@ async def main():
             print(json.dumps(payload, indent=2, ensure_ascii=False))
 
             if not custom:
-                assert payload["status"] == "success"
-                assert "Order #12345" in payload["extracted"]["confirmation_message"]
+                assert payload["status"] == "success", payload.get("error")
+                assert payload["scenario_id"] == "place_purchase_order"
+                assert "Order #12345" in payload["results"]["confirmation_message"]
+                assert payload["failed_step"] is None
                 print("\nALL MCP PROTOCOL CHECKS PASSED")
             else:
                 print(f"\nRESULT: {payload['status']}")

@@ -5,8 +5,18 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 RECORDINGS_DIR = os.path.join(BASE_DIR, "recordings")
 SCREENSHOTS_DIR = os.path.join(BASE_DIR, "screenshots")
 
-DEFAULT_TIMEOUT_MS = 5000
+# How long to keep looking for an element before giving up.
+DEFAULT_TIMEOUT_MS = int(os.environ.get("MCP_TOOL_GENERATOR_DEFAULT_TIMEOUT_MS", "10000"))
 POLL_INTERVAL_SECONDS = 0.25
+
+# A wait with no wait_until means "fixed_delay" in the recording spec. Replays
+# would spend most of their time asleep if every step's timeout were slept
+# through, so by default the timeout is treated as an upper bound and the step
+# continues as soon as the page is loaded.
+#   "settle" (default) - wait until loaded, at most timeout_ms
+#   "sleep"            - sleep the full timeout_ms, exactly as written
+FIXED_DELAY_MODE = os.environ.get("MCP_TOOL_GENERATOR_FIXED_DELAY_MODE", "settle").strip().lower()
+SETTLE_DELAY_MS = int(os.environ.get("MCP_TOOL_GENERATOR_SETTLE_DELAY_MS", "300"))
 
 # The last step often kicks off a navigation (a login submit, a form post), so
 # the final screenshot has to wait for the browser to land on the next page —

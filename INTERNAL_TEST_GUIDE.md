@@ -166,18 +166,26 @@ $env:MCP_TOOL_GENERATOR_BROWSER = "chrome"
 
 출력된 JSON에서 볼 곳:
 
+결과 JSON은 `recordings_rule.md` 11장의 실행 결과 스키마를 따릅니다.
+
 | 필드 | 의미 |
 |---|---|
-| `status` | `success` = 전 스텝 완료 / `error` = 중간에 실패 |
-| `step_results[]` | 위에서부터 훑어서 `"status": "error"`가 처음 나오는 곳이 실패 지점 |
-| `extracted` | `extract` 스텝으로 읽어온 값. 기대한 값이 맞는지 확인 |
+| `scenario_id` | 실행된 레코딩의 `id` |
+| `status` | `success` = 전부 성공 / `failed` = 중간에 실패 / `partial` = 일부 스텝이 `skip` 정책으로 건너뛰어짐 |
+| `failed_step` | 실패한 스텝의 `id` (성공이면 `null`) |
+| `results` | `extract_as`로 읽어온 값들. 최상위 `outputs`가 있으면 그 목록으로 걸러짐 |
+| `step_log[]` | 스텝별 `success` / `failed` / `skipped`와 소요 시간. `skipped`에는 사유(`note`)가 붙습니다 |
+| `started_at` / `finished_at` | 실행 시작·종료 시각 |
 | `error.error_type` | 실패 원인 분류 |
 | `error.attempted_selectors` | 시도했지만 못 찾은 셀렉터 목록 |
 | `alerts_handled` | 자동으로 닫은 alert 창의 문구 목록. 예상 못한 안내창이 떴는지 여기서 확인 |
 | `screenshot_path` | **성공/실패 모두 스크린샷이 남습니다.** 이 경로의 png를 열어보면 그 순간 화면을 볼 수 있습니다 |
 
-`status`가 `success`여도 `extracted` 값이 이상하면(빈 문자열 등) 논리적으로는 실패입니다.
+`status`가 `success`여도 `results` 값이 이상하면(빈 문자열 등) 논리적으로는 실패입니다.
 스크린샷을 같이 확인하세요.
+
+`step_log`에서 `skipped`는 두 가지 경우입니다 — `condition`이 맞지 않아 건너뛴 스텝이거나,
+레코더가 남긴 관찰용 이벤트(`window_open_call` 등, 아래 11장)입니다.
 
 ---
 
@@ -225,12 +233,14 @@ JSON 검증 실패입니다. 실행 시 출력되는 `[WARN]` 메시지에 어�
 
 아래는 지금 인터프리터가 처리하지 못합니다. 사내 시스템이 이 방식을 쓰면 별도 개발이 필요합니다.
 
-- **iframe 안의 요소** — 최상위 문서에서만 찾습니다
-- **파일 업로드 다이얼로그** (OS 창이라 셀레늄이 제어 불가)
+- **OS 파일 선택 다이얼로그를 실제로 띄우는 업로드** — `upload_file` 액션은 파일 경로를
+  `<input type="file">`에 직접 넣는 방식이라 OS 창이 뜨는 경우는 다루지 못합니다
 - **OS 클립보드를 실제로 거치는 복사·붙여넣기** — 값을 직접 읽어 넣는 방식으로 대신합니다 (9장)
+- **`network_idle` 대기** — CDP를 쓰지 않아 "로딩 완료 + 짧은 여유"로 근사합니다
 
 > `alert()` / `confirm()` / `prompt()` 창은 지원합니다 (8장).
-> 새 창·팝업도 지원합니다 (10장) — 팝업으로 뜨는 SSO 로그인도 `switch_window`로 다룰 수 있습니다.
+> 새 창·팝업도 지원합니다 (10장) — 팝업으로 뜨는 SSO 로그인도 `switch_tab`으로 다룰 수 있습니다.
+> iframe 안의 요소도 `target.frame_path` 또는 `iframe_enter`/`iframe_exit`로 다룰 수 있습니다.
 
 ---
 
@@ -281,30 +291,35 @@ JSON 검증 실패입니다. 실행 시 출력되는 `[WARN]` 메시지에 어�
 ## 9. 화면의 값을 복사해서 다른 곳에 붙여넣기
 
 발주번호처럼 화면에 뜬 값을 그대로 다른 입력란에 넣어야 할 때 씁니다.
-`extract`로 읽어둔 값을 뒤 스텝에서 `"type": "extracted"`로 가져다 씁니다.
+`extract`로 읽어둔 값을 뒤 스텝에서 `"type": "extracted_ref"`로 가져다 씁니다.
 
 ```json
 {
   "id": "copy_order_no",
   "action": "extract",
   "target": { "selectors": [{ "type": "css", "value": "#order-no" }] },
+  "options": { "extract_type": "text" },
   "extract_as": "order_no"
 },
 {
   "id": "paste_order_no",
   "action": "input",
   "target": { "selectors": [{ "type": "css", "value": "#search-input" }] },
-  "value": { "type": "extracted", "name": "order_no" }
+  "value": { "type": "extracted_ref", "name": "order_no" }
 }
 ```
 
-`value`에 쓸 수 있는 세 가지:
+`value`에 쓸 수 있는 네 가지:
 
 | type | 값의 출처 |
 |---|---|
 | `variable` | tool 호출 시 넘어온 인자 (`name`이 `variables`의 키) |
 | `literal` | 레코딩에 고정으로 적어둔 값 (`value`) |
-| `extracted` | 앞선 `extract` 스텝이 읽어둔 값 (`name`이 그 스텝의 `extract_as`) |
+| `extracted_ref` | 앞선 `extract` 스텝이 읽어둔 값 (`name`이 그 스텝의 `extract_as`) |
+| `expression` | 허용된 함수만 쓰는 계산식: `today()`, `now()`, `concat()`, `random_int()`. 예: `"today() + '-report'"` |
+
+`extract`는 `options.extract_type`으로 무엇을 읽을지 정합니다 — `text`(기본) / `value`(입력값) /
+`attribute`(`options.attribute_name` 필요) / `html` / `count`.
 
 > **OS 클립보드(Ctrl+C/Ctrl+V)를 쓰지 않습니다.** 클립보드는 사용자가 쓰던 복사 내용을
 > 덮어쓰고 다른 프로그램과도 얽혀서 자동화에 불안정합니다. 화면의 값을 직접 읽어 넣는
@@ -316,69 +331,160 @@ JSON 검증 실패입니다. 실행 시 출력되는 `[WARN]` 메시지에 어�
 
 ---
 
-## 10. 새 창(팝업)에서 작업하기
+## 10. 새 창(팝업)으로 focus 옮기기
 
-버튼을 눌러 새 창이 떠도 **셀레늄은 원래 창을 계속 보고 있습니다.** 새 창의 요소를
-건드리려면 `switch_window`로 옮겨가야 합니다.
+메일쓰기처럼 버튼을 누르면 새 창이 뜨는 경우, **창이 떠도 셀레늄은 원래 창을 계속 보고
+있습니다.** 새 창의 요소를 건드리려면 그 창을 이름으로 묶어두고(`open_tab`) 전환
+(`switch_tab`)해야 합니다.
 
 ```json
 {
-  "id": "open_picker",
+  "id": "step_001",
   "action": "click",
-  "target": { "selectors": [{ "type": "css", "value": "#open-picker-btn" }] }
+  "target": { "selectors": [{ "type": "text", "value": "메일쓰기", "exact": true }] },
+  "wait_after": { "timeout_ms": 3000 }
 },
 {
-  "id": "switch_to_picker",
-  "action": "switch_window",
-  "window_target": "new",
-  "wait_after": { "timeout_ms": 8000 }
+  "id": "step_003",
+  "action": "open_tab",
+  "extract_as": "compose_tab",
+  "wait_after": { "timeout_ms": 5000 }
+},
+{
+  "id": "step_004",
+  "action": "switch_tab",
+  "options": { "tab_ref": "compose_tab" }
 },
 
-  ... 새 창에서의 input / click / extract 스텝들 ...
+  ... 새 창에서의 input / select_option / click 스텝들 ...
 
 {
-  "id": "switch_back_to_main",
-  "action": "switch_window",
-  "window_target": "original"
+  "id": "step_012",
+  "action": "switch_tab",
+  "options": { "tab_ref": "opener" }
 }
 ```
 
-`window_target` 값:
+**`open_tab`** — 새로 뜬 창을 `extract_as`의 이름으로 묶어둡니다. 세 가지 형태가 있습니다.
 
-| 값 | 의미 |
+| 형태 | 동작 |
 |---|---|
-| `new` | 가장 최근에 열린 창으로 이동 (창이 뜰 때까지 `wait_after`만큼 기다림) |
-| `original` | 레코딩을 시작한 원래 창으로 복귀 |
-| `match` | `window_match`에 적은 문자열이 URL 또는 제목에 포함된 창으로 이동 |
+| `target` + `options.trigger: "click_target"` | 그 요소를 클릭해서 창을 열고 묶음 |
+| `options.url` | 그 URL로 새 창을 열고 묶음 |
+| 둘 다 없음 | 앞선 스텝 때문에 이미 떠 있는(또는 곧 뜰) 창을 묶음 — 실제 레코더가 쓰는 형태 |
 
-- 새 창이 여러 개 뜨는 경우에는 `match`로 어느 창인지 지정하는 편이 안전합니다.
-- 팝업이 스스로 닫히지 않는다면 `close_window` 액션으로 닫고 원래 창으로 돌아올 수 있습니다.
-- 지정한 시간 안에 창을 못 찾으면 `window_not_found`로 실패합니다.
+세 경우 모두 **활성 창은 바뀌지 않습니다.** `switch_tab`을 해야 focus가 옮겨갑니다.
 
-> 팝업에서 "선택 완료"를 누르면 팝업이 스스로 닫히고 값이 원래 창에 반영되는 방식이 흔한데,
-> 이때도 `switch_window`(`original`)로 돌아와서 반영된 값을 `extract`하면 됩니다.
+**`switch_tab`** — `options.tab_ref`로 대상을 지정합니다.
+
+| `tab_ref` | 의미 |
+|---|---|
+| `"compose_tab"` (이름) | `open_tab`의 `extract_as`로 묶어둔 창 |
+| `{ "type": "extracted_ref", "name": "compose_tab" }` | 위와 동일 (객체 형태) |
+| `"latest"` | 가장 최근에 열린 창 |
+| `"opener"` | 지금 창을 열어준 창(= 원래 창)으로 복귀 |
+
+**`close_tab`** — `options.tab_ref`로 지정한 창을 닫고 opener로 돌아옵니다. 생략하면 현재 창.
+팝업이 스스로 닫히는 경우(아래)에는 안 써도 됩니다.
+
+> 팝업에서 "발송"/"선택 완료"를 누르면 팝업이 스스로 닫히고 값이 원래 창에 반영되는 방식이
+> 사내 시스템에 흔합니다. 이때도 `switch_tab`(`opener`)으로 돌아와서 반영된 값을
+> `extract`하면 됩니다. 이미 닫힌 창을 `close_tab` 해도 에러가 아니라 그냥 넘어갑니다.
 >
-> 참고 예시: `recordings/pick_employee_in_popup.json`
+> 참고 예시: `recordings/compose_mail_in_popup.json` (메일쓰기 → 새 창 → 발송 → 복귀),
+> `recordings/pick_employee_in_popup.json` (담당자 검색 팝업)
 
-막히면 어느 지점에서 어떤 화면이었는지(스크린샷) 기록해두시면 이후 대응이 쉽습니다.
+- 창을 지정한 시간 안에 못 찾으면 `tab_not_found`로 실패합니다.
+- 막히면 어느 지점에서 어떤 화면이었는지(스크린샷) 기록해두시면 이후 대응이 쉽습니다.
 
 ---
 
-## 부록: 지원 액션 목록
+## 11. 레코더가 남기는 관찰용 이벤트
 
-레코딩 JSON의 `action`에 쓸 수 있는 값입니다.
+실제 레코더는 `window_open_call`, `sso_popup_recover` 처럼 **브라우저에서 무슨 일이
+일어났는지 관찰한 기록**도 함께 남깁니다. 이것들은 재현할 동작이 아니라 흔적이라
+실행기는 건너뜁니다 (`step_log`에 `skipped`로 남습니다).
 
-| action | 동작 | 필요한 필드 |
-|---|---|---|
-| `input` | 텍스트 입력 | `target`, `value` |
-| `click` | 클릭 | `target` |
-| `select` | 드롭다운 선택 | `target`, `value` |
-| `navigate` | URL 이동 | `value` (이동할 주소) |
-| `wait` | 대기 | `target` 있으면 그 요소를 기다림, 없으면 시간만큼 대기 |
-| `extract` | 화면에서 값 읽기 | `target`, `extract_as` (결과 key), `extract_attribute` (선택) |
-| `alert` | alert/confirm 창 닫기 | `alert_action` (선택), `extract_as` (선택), `alert_input` (선택) |
-| `switch_window` | 다른 창으로 이동 | `window_target`, `window_match` (`match`일 때) |
-| `close_window` | 현재 창을 닫고 원래 창으로 복귀 | 없음 |
+```json
+{ "id": "step_002", "action": "window_open_call",
+  "options": { "message": "window.open() called", "options": { "url": "...", "opened": true } } }
+```
 
-셀렉터는 `target.selectors` 배열에 여러 개 넣으면 **앞에서부터 순서대로 시도**해서
-먼저 잡히는 것을 사용합니다 (css/xpath 혼용 가능).
+창을 열게 만든 **클릭을 재현하면 창은 알아서 다시 열리기 때문에**, 이 이벤트까지 실행하면
+창이 두 번 열립니다. 그래서 의도적으로 실행하지 않습니다.
+
+레코더가 앞으로 새로운 action을 추가해도, 그 스텝만 실패하고 나머지는 계속 실행됩니다
+(`recordings_rule.md` 13장의 하위 호환 원칙). 레코딩 전체가 등록 불가가 되지는 않습니다.
+
+---
+
+## 12. 스텝 실패 시의 동작 지정 (`on_error`)
+
+스텝에 `on_error`를 달면 실패했을 때의 처리를 바꿀 수 있습니다.
+
+```json
+"on_error": { "strategy": "retry", "retry_count": 2, "retry_interval_ms": 1000 }
+```
+
+| `strategy` | 동작 |
+|---|---|
+| `abort` (기본) | 전체 실행 중단, `status: "failed"` |
+| `skip` | 그 스텝만 건너뛰고 계속, 최종 `status: "partial"` |
+| `retry` | `retry_count`만큼 재시도 후에도 실패하면 중단 |
+
+가끔 뜨는 안내 배너처럼 **있을 수도 없을 수도 있는 요소**는 `skip`으로, 네트워크가 느려
+가끔 놓치는 스텝은 `retry`로 두면 재현 성공률이 올라갑니다.
+
+---
+
+## 부록 A: 지원 액션 목록
+
+`docs/recordings_rule.md` 7~10장의 카탈로그를 모두 지원합니다.
+
+**탐색 · 탭/창** — `navigate`(`options.url`), `back`, `forward`, `reload`,
+`open_tab`, `switch_tab`, `close_tab`, `resize_window`(`options.width/height`)
+
+**마우스 · 키보드 · 폼** — `click`(`options.button`, `click_count`), `dblclick`,
+`right_click`, `hover`, `drag_and_drop`(`options.target_selector`),
+`input`(`options.clear_first`), `clear`, `key_press`(`options.key`, `modifiers`),
+`select_option`(`options.by`: value/label/index), `check`, `uncheck`, `radio_select`,
+`upload_file`(`file_path` 변수)
+
+**다이얼로그 · 컨텍스트** — `alert`(`alert_action`, prompt면 `value`),
+`iframe_enter`, `iframe_exit`, `scroll`(`options.direction`, `amount_px`), `focus`, `blur`
+
+**추출 · 검증** — `extract`(`options.extract_type`), `assert`(`options.assert_type`, `expected`),
+`screenshot`(`options.full_page`), `wait`
+
+관찰용(실행하지 않고 건너뜀) — `window_open_call`, `sso_popup_recover`
+
+## 부록 B: 셀렉터
+
+`target.selectors` 배열은 **앞에서부터 순서대로 시도**해서 먼저 잡히는 것을 씁니다.
+
+지원 타입: `css`, `xpath`, `text`, `role`, `test_id`, `aria_label`, `placeholder`
+(`text`/`aria_label`/`placeholder`는 `exact: false`로 부분 일치 가능)
+
+| `target` 필드 | 의미 |
+|---|---|
+| `nth` | 여러 개 매칭될 때 몇 번째를 쓸지 (0부터) |
+| `frame_path` | iframe 안의 요소일 때, 바깥에서 안쪽 순서로 iframe 셀렉터 나열 |
+| `scroll_into_view` | 조작 전 화면에 보이도록 스크롤 (기본 `true`) |
+
+## 부록 C: 대기 조건 (`wait_before` / `wait_after`)
+
+```json
+"wait_before": {
+  "timeout_ms": 8000,
+  "wait_until": "selector_visible",
+  "target": { "selectors": [{ "type": "css", "value": "#welcome" }] }
+}
+```
+
+`wait_until`: `fixed_delay`(기본) / `selector_visible` / `selector_hidden` /
+`network_idle` / `dom_content_loaded` / `load` / `dialog_present`
+
+> **`fixed_delay`의 기본 동작 하나는 명세와 다릅니다.** 명세대로 `timeout_ms`를 꽉 채워
+> 자면 스텝마다 3초씩 자느라 재현이 매우 느려집니다. 그래서 기본값은 `timeout_ms`를
+> **상한**으로 보고 페이지 로딩이 끝나는 즉시 넘어갑니다. 명세 그대로 전부 재우려면
+> `set MCP_TOOL_GENERATOR_FIXED_DELAY_MODE=sleep` 으로 바꾸세요.

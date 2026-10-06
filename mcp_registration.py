@@ -15,6 +15,8 @@ _TYPE_MAP = {
     VarType.NUMBER: float,
     VarType.BOOLEAN: bool,
     VarType.SECRET: str,
+    VarType.ENUM: str,
+    VarType.FILE_PATH: str,
 }
 
 
@@ -23,8 +25,10 @@ def build_input_model(recording: Recording) -> type[BaseModel]:
     for var_name, spec in recording.variables.items():
         py_type = _TYPE_MAP[spec.type]
         field_kwargs: dict[str, Any] = {"description": spec.description}
-        if spec.type == VarType.SECRET:
+        if spec.is_sensitive:
             field_kwargs["json_schema_extra"] = {"format": "password"}
+        if spec.type == VarType.ENUM and spec.options:
+            field_kwargs["json_schema_extra"] = {"enum": list(spec.options)}
         if spec.required:
             fields[var_name] = (py_type, Field(..., **field_kwargs))
         else:
@@ -49,7 +53,7 @@ def _to_call_tool_result(result_json: dict, screenshot_path: Optional[str]) -> t
             content.append(types.ImageContent(type="image", data=data, mimeType="image/png"))
         except OSError:
             pass
-    return types.CallToolResult(content=content, isError=result_json.get("status") == "error")
+    return types.CallToolResult(content=content, isError=result_json.get("status") == "failed")
 
 
 class ToolRegistry:

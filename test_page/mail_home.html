@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Mail Home (Test Fixture)</title>
+</head>
+<body>
+  <h1>사내 메일 (테스트용) - 메인 창</h1>
+
+  <div id="Lnb">
+    <div><a id="compose-link" href="#">메일쓰기</a></div>
+  </div>
+
+  <div>
+    <span>마지막 발송: </span><span id="last-sent"></span>
+  </div>
+
+  <script>
+    document.getElementById("compose-link").addEventListener("click", function (e) {
+      e.preventDefault();
+      // 사내 메일처럼 메일쓰기는 새 창(팝업)으로 열린다.
+      window.open("mail_compose.html", "_blank", "width=1290,height=826,resizable=yes");
+    });
+
+    window.applySent = function (subject) {
+      document.getElementById("last-sent").textContent = subject;
+    };
+  </script>
+</body>
+</html>

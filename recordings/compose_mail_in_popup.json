@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "id": "compose_mail_in_popup",
+  "name": "Compose Mail In Popup Window",
+  "description": "사내 메일에서 메일쓰기를 눌러 새 창을 띄우고, 그 창으로 전환해 수신자/제목/본문을 입력한 뒤 발송합니다. 발송 확인창을 처리하고 메인 창으로 돌아와 결과를 확인합니다.",
+  "start_url": "http://localhost:8000/mail_home.html",
+  "variables": {
+    "recipient": {
+      "type": "string",
+      "required": true,
+      "description": "받는 사람 메일 주소"
+    },
+    "subject": {
+      "type": "string",
+      "required": true,
+      "description": "메일 제목"
+    },
+    "body": {
+      "type": "string",
+      "required": false,
+      "default": "",
+      "description": "메일 본문"
+    },
+    "priority": {
+      "type": "enum",
+      "required": false,
+      "default": "normal",
+      "options": ["normal", "high"],
+      "description": "메일 중요도"
+    }
+  },
+  "steps": [
+    {
+      "id": "step_001",
+      "action": "click",
+      "target": {
+        "selectors": [
+          { "type": "css", "value": "div#Lnb > div > a" },
+          { "type": "text", "value": "메일쓰기", "exact": true }
+        ]
+      },
+      "wait_after": { "timeout_ms": 3000 }
+    },
+    {
+      "id": "step_002",
+      "action": "window_open_call",
+      "options": {
+        "message": "window.open() called",
+        "options": {
+          "url": "mail_compose.html",
+          "name": "_blank",
+          "features": "width=1290,height=826,resizable=yes",
+          "opened": true,
+          "blocked": false,
+          "error": null
+        }
+      }
+    },
+    {
+      "id": "step_003",
+      "action": "open_tab",
+      "extract_as": "compose_tab",
+      "wait_after": { "timeout_ms": 5000 }
+    },
+    {
+      "id": "step_004",
+      "action": "switch_tab",
+      "options": { "tab_ref": "compose_tab" },
+      "wait_after": { "timeout_ms": 5000 }
+    },
+    {
+      "id": "step_005",
+      "action": "input",
+      "target": { "selectors": [{ "type": "css", "value": "#mail-to" }] },
+      "value": { "type": "variable", "name": "recipient" },
+      "wait_after": { "timeout_ms": 3000 }
+    },
+    {
+      "id": "step_006",
+      "action": "input",
+      "target": { "selectors": [{ "type": "css", "value": "#mail-subject" }] },
+      "value": { "type": "variable", "name": "subject" },
+      "wait_after": { "timeout_ms": 3000 }
+    },
+    {
+      "id": "step_007",
+      "action": "input",
+      "target": { "selectors": [{ "type": "css", "value": "#mail-body" }] },
+      "value": { "type": "variable", "name": "body" },
+      "wait_after": { "timeout_ms": 3000 }
+    },
+    {
+      "id": "step_008",
+      "action": "select_option",
+      "target": { "selectors": [{ "type": "css", "value": "#mail-priority" }] },
+      "value": { "type": "variable", "name": "priority" },
+      "options": { "by": "value" },
+      "wait_after": { "timeout_ms": 3000 }
+    },
+    {
+      "id": "step_009",
+      "action": "assert",
+      "target": { "selectors": [{ "type": "css", "value": "#mail-send-btn" }] },
+      "options": { "assert_type": "enabled" }
+    },
+    {
+      "id": "step_010",
+      "action": "click",
+      "target": { "selectors": [{ "type": "css", "value": "#mail-send-btn" }] },
+      "wait_after": { "timeout_ms": 3000 }
+    },
+    {
+      "id": "step_011",
+      "action": "alert",
+      "alert_action": "accept",
+      "extract_as": "send_confirm_question",
+      "wait_after": { "timeout_ms": 5000 }
+    },
+    {
+      "id": "step_012",
+      "action": "switch_tab",
+      "options": { "tab_ref": "opener" },
+      "wait_after": { "timeout_ms": 5000 }
+    },
+    {
+      "id": "step_013",
+      "action": "extract",
+      "target": { "selectors": [{ "type": "css", "value": "#last-sent" }] },
+      "options": { "extract_type": "text" },
+      "extract_as": "last_sent_subject",
+      "wait_before": {
+        "timeout_ms": 8000,
+        "wait_until": "selector_visible",
+        "target": { "selectors": [{ "type": "css", "value": "#last-sent" }] }
+      },
+      "wait_after": { "timeout_ms": 3000 }
+    }
+  ],
+  "outputs": ["compose_tab", "send_confirm_question", "last_sent_subject"]
+}
