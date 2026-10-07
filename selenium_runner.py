@@ -31,12 +31,37 @@ import config
 from schema import ActionType, Selector, SelectorType, Step, Target, WaitUntil
 
 
+def _describe_selector(sel: Selector) -> str:
+    """How a selector is reported when it fails to match.
+
+    An `html` selector is shown with the lookup it was turned into: the raw
+    markup cannot be searched for in dev tools (attribute order and quoting
+    differ from the live DOM), but the derived selector can be.
+    """
+    if sel.type == SelectorType.HTML:
+        derived = _css_from_html(sel.value)
+        shown = (sel.value[:60] + "...") if len(sel.value) > 60 else sel.value
+        if derived:
+            return f"html={shown!r} (searched as {derived!r})"
+        return f"html={shown!r} (nothing in it identifies an element)"
+    return f"{sel.type}={sel.value!r}"
+
+
+def selector_report(sel: Selector) -> dict:
+    """A selector as it appears in a failure result."""
+    entry = {"type": sel.type, "value": sel.value}
+    if sel.type == SelectorType.HTML:
+        # The lookup it became — this is the part worth pasting into dev tools.
+        entry["searched_as"] = _css_from_html(sel.value)
+    return entry
+
+
 class TargetResolutionError(Exception):
     def __init__(self, selectors: list[Selector], timeout_ms: int, found_hidden: bool = False):
         self.selectors = selectors
         self.timeout_ms = timeout_ms
         self.found_hidden = found_hidden
-        attempted = ", ".join(f"{s.type}={s.value!r}" for s in selectors)
+        attempted = ", ".join(_describe_selector(s) for s in selectors)
         if found_hidden:
             # Worth separating: the page is the right one and the selector is
             # correct, the element just never became visible. "Not found" would
