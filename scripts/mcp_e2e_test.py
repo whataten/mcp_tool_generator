@@ -59,11 +59,14 @@ def parse_arguments(argv: list[str]) -> dict:
 
 
 async def main():
-    custom = len(sys.argv) >= 3
+    # A tool id on its own is a complete request: a recording whose variables
+    # are empty takes no arguments. Falling back to the bundled sample here
+    # would quietly run something the caller never asked for.
+    custom = len(sys.argv) >= 2
     if custom:
         tool_name = sys.argv[1]
         try:
-            arguments = parse_arguments(sys.argv[2:])
+            arguments = parse_arguments(sys.argv[2:]) if len(sys.argv) >= 3 else {}
         except (json.JSONDecodeError, ValueError) as e:
             print(f"[ERROR] 인자를 해석하지 못했습니다: {e}")
             print("  key=value 형태를 권장합니다. 예) customer_id=12345")
@@ -96,7 +99,11 @@ async def main():
                 print(f"- {t.name}: {t.description}")
 
             if not any(t.name == tool_name for t in tools_result.tools):
-                print(f"\n[ERROR] '{tool_name}' 이 등록된 tool 목록에 없습니다. recordings/ 폴더와 id를 확인하세요.")
+                print(f"\n[ERROR] '{tool_name}' 이 등록된 tool 목록에 없습니다.")
+                print("  tool 이름은 파일명이 아니라 JSON 안의 \"id\" 값입니다.")
+                print("  위 목록에 있는 이름 중 하나를 쓰세요:")
+                for t in tools_result.tools:
+                    print(f"    {t.name}")
                 return
 
             print(f"\n=== call_tool: {tool_name} ===")
