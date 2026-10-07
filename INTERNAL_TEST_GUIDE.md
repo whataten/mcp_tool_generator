@@ -119,6 +119,64 @@ $env:MCP_TOOL_GENERATOR_BROWSER = "chrome"
 
 ---
 
+## 3-5. 로그인 선행 처리 (사내 시스템 필수)
+
+레코딩에는 **보안상 로그인 과정을 기록하지 않습니다.** 대신 실행기가 모든 레코딩 앞에
+"사람이 직접 로그인할 때까지 기다리는" 단계를 붙여줍니다.
+
+```
+set MCP_TOOL_GENERATOR_LOGIN_PRELUDE=login_prelude.json
+```
+```
+$env:MCP_TOOL_GENERATOR_LOGIN_PRELUDE = "login_prelude.json"
+```
+
+**동작 순서**
+
+1. `start_url`로 접속하고 **창을 화면에 보이게** 둡니다
+2. 사용자가 직접 아이디/비밀번호를 입력하고 **로그인 버튼을 누를 때까지 기다립니다** (기본 최대 5분)
+3. 버튼이 눌리면 **10초 대기** — 로그인 완료를 직접 감지할 수 없으므로 고정 시간을 줍니다
+4. **창을 화면 밖으로 치웁니다** (이후로는 백그라운드처럼 동작)
+5. `start_url`로 다시 이동한 뒤 레코딩 스텝을 쭉 실행합니다
+
+**`login_prelude.json`에서 조정할 것** — 사내 시스템의 로그인 버튼 셀렉터를 맞춰주세요:
+
+```json
+"target": {
+  "selectors": [
+    { "type": "css", "value": "#login-btn" },
+    { "type": "css", "value": "input[type='submit']" },
+    { "type": "text", "value": "로그인", "exact": true }
+  ]
+},
+"options": {
+  "skip_if_absent_ms": 5000,
+  "after_click_sleep_ms": 10000
+},
+"wait_after": { "timeout_ms": 300000 }
+```
+
+| 항목 | 의미 |
+|---|---|
+| `selectors` | 로그인 버튼. 위에서부터 순서대로 시도합니다 |
+| `skip_if_absent_ms` | 이 시간 안에 로그인 버튼이 안 보이면 **이미 로그인된 것으로 보고 건너뜁니다** |
+| `after_click_sleep_ms` | 버튼이 눌린 뒤 기다릴 시간 (기본 10초). 사내 시스템이 느리면 늘리세요 |
+| `wait_after.timeout_ms` | 사용자가 로그인하기를 기다리는 최대 시간 (기본 5분) |
+
+**매번 로그인하기 싫다면** — tool 호출마다 새 브라우저가 뜨므로 기본적으로는 매번 로그인해야
+합니다. 브라우저 프로필을 재사용하면 세션 쿠키가 남아 두 번째 호출부터는 이미 로그인된
+상태로 시작합니다 (그러면 위 `skip_if_absent_ms` 덕분에 대기 없이 바로 진행됩니다):
+
+```
+set MCP_TOOL_GENERATOR_USER_DATA_DIR=C:\work\edge-profile
+```
+
+> **로그인 직후 첫 스텝이 실패한다면** `MCP_TOOL_GENERATOR_LOGIN_RENAVIGATE=0`을 시도해보세요.
+> 기본값은 로그인 후 `start_url`로 다시 이동하는 것인데(로그인하면 시스템 홈으로 가버리는
+> 경우가 많아서), 시스템에 따라서는 다시 이동하는 것이 오히려 상태를 되돌릴 수 있습니다.
+
+---
+
 ## 4. 등록 확인 + 실행 테스트
 
 같은 창에서(환경변수가 유지된 상태로) 실행합니다.

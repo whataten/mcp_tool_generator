@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": "login_prelude",
+  "name": "Manual Login Prelude",
+  "description": "레코딩에는 보안상 로그인 과정을 기록하지 않으므로, 실제 사용자가 직접 로그인할 때까지 기다린 뒤 창을 화면 밖으로 옮기고 레코딩 스텝을 시작합니다.",
+  "start_url": "",
+  "variables": {},
+  "steps": [
+    {
+      "id": "wait_for_user_login",
+      "action": "await_user_click",
+      "target": {
+        "selectors": [
+          { "type": "css", "value": "#login-btn" },
+          { "type": "css", "value": "input[type='submit']" },
+          { "type": "text", "value": "로그인", "exact": true }
+        ]
+      },
+      "options": {
+        "skip_if_absent_ms": 5000,
+        "after_click_sleep_ms": 10000
+      },
+      "wait_after": { "timeout_ms": 300000 }
+    },
+    {
+      "id": "hide_browser_window",
+      "action": "window_mode",
+      "options": { "mode": "background" }
+    }
+  ]
+}

@@ -1,7 +1,11 @@
 """Replays one recording and reports the result (section 11 of the rule doc)."""
 import datetime
+import json
+import sys
 import time
 from typing import Optional
+
+from pydantic import ValidationError
 
 from selenium.common.exceptions import (
     ElementClickInterceptedException,
@@ -66,6 +70,33 @@ def _classify_error(exc: Exception, step: Step) -> ErrorDetail:
     )
 
 
+def load_login_prelude() -> list[Step]:
+    """Steps that run ahead of every recording, if a prelude file is configured.
+
+    Recordings leave sign-in out on purpose (capturing credentials would be a
+    security problem), so this is where waiting for the person to sign in by
+    hand lives. See config.LOGIN_PRELUDE_FILE.
+    """
+    path = config.LOGIN_PRELUDE_FILE
+    if not path:
+        return []
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            raw = json.load(f)
+    except OSError as e:
+        print(f"[WARN] login prelude {path} could not be read: {e}", file=sys.stderr)
+        return []
+    except json.JSONDecodeError as e:
+        print(f"[WARN] login prelude {path} is not valid JSON: {e}", file=sys.stderr)
+        return []
+
+    try:
+        return [Step.model_validate(s) for s in raw.get("steps", [])]
+    except ValidationError as e:
+        print(f"[WARN] login prelude {path} has invalid steps: {e}", file=sys.stderr)
+        return []
+
+
 def _condition_holds(condition: Condition, bound_vars: dict, extracted: dict) -> bool:
     store = bound_vars if condition.source == "variable" else extracted
     present = condition.name in store
@@ -99,6 +130,21 @@ class RecordingInterpreter:
         try:
             driver.get(self.recording.start_url)
             ctx.root_handle = driver.current_window_handle
+
+            prelude = load_login_prelude()
+            if prelude:
+                for step in prelude:
+                    error = self._run_step(
+                        driver, step, bound_vars, extracted, ctx, alerts_handled, step_log
+                    )
+                    if error is not None:
+                        return self._failed(
+                            started_at, step, error, extracted, step_log, alerts_handled
+                        )
+                if config.LOGIN_PRELUDE_RENAVIGATE:
+                    # Signing in usually lands on the system's own home page, so
+                    # go back to where the recording expects to start.
+                    driver.get(self.recording.start_url)
 
             for step in self.recording.steps:
                 if step.is_annotation:
@@ -176,15 +222,21 @@ class RecordingInterpreter:
             t0 = time.monotonic()
             try:
                 produced = sr.execute_step(driver, step, bound_vars, extracted, ctx, alerts_handled)
+                note = None
                 if produced:
+                    # A step can report what it did without that landing in the
+                    # recording's results.
+                    note = produced.pop("__note__", None)
                     extracted.update(produced)
+                if attempt:
+                    note = f"succeeded on attempt {attempt + 1}"
                 step_log.append(
                     StepLogEntry(
                         step_id=step.id,
                         action=step.action,
                         status="success",
                         duration_ms=int((time.monotonic() - t0) * 1000),
-                        note=f"succeeded on attempt {attempt + 1}" if attempt else None,
+                        note=note,
                     )
                 )
                 return None

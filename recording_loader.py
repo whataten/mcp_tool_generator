@@ -45,6 +45,18 @@ def load_all_recordings(recordings_dir: str) -> tuple[dict[str, Recording], list
             )
             continue
 
+        if len(recording.description.strip()) < 10:
+            # Registered anyway — this is a quality warning, not a defect. The
+            # description is the only thing an LLM reads when choosing between
+            # tools, so a terse one makes it pick badly once there are several.
+            errors.append(
+                LoadError(
+                    path,
+                    f"description is very short ({recording.description!r}); an LLM picks "
+                    "between tools by this text alone, so consider spelling out what it does",
+                )
+            )
+
         recordings[recording.id] = recording
 
     return recordings, errors

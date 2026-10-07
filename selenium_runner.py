@@ -73,6 +73,11 @@ def _prepare_options(options):
     # standing so handle_alert() decides what happens to it.
     options.set_capability("unhandledPromptBehavior", "ignore")
 
+    if config.USER_DATA_DIR:
+        # Reusing a profile keeps the session cookie, so a later tool call can
+        # find itself already signed in rather than asking the person again.
+        options.add_argument(f"--user-data-dir={config.USER_DATA_DIR}")
+
     if config.KEEP_BROWSER_OPEN:
         # Without this the browser dies with the driver process.
         options.add_experimental_option("detach", True)
@@ -774,6 +779,118 @@ def _key_press(driver, step: Step, ctx: ExecutionContext) -> None:
     chain.perform()
 
 
+def _type_into(driver, element, text: str, clear_first: bool = True) -> None:
+    """Type into a field, or into a rich-text editor.
+
+    Mail editors put the body in a contenteditable <body> rather than an input.
+    There, clear() wipes the content but send_keys lands nowhere — the element
+    is not a form field — so the text silently never arrives. Focus it and type
+    at the caret instead.
+    """
+    editable = False
+    try:
+        editable = bool(driver.execute_script("return arguments[0].isContentEditable;", element))
+    except Exception:
+        pass
+
+    if not editable:
+        if clear_first:
+            element.clear()
+        element.send_keys(text)
+        return
+
+    try:
+        element.click()
+    except Exception:
+        pass
+    driver.execute_script("arguments[0].focus();", element)
+    if clear_first:
+        driver.execute_script("arguments[0].innerHTML = '';", element)
+    # Goes to whatever now holds the caret, which is the editor.
+    ActionChains(driver).send_keys(text).perform()
+
+
+def apply_window_mode(driver, mode: str) -> bool:
+    """Move every open window on- or off-screen. False if the browser was busy."""
+    position = (
+        config.OFFSCREEN_WINDOW_POSITION
+        if mode == "background"
+        else config.VISIBLE_WINDOW_POSITION
+    )
+    try:
+        current = driver.current_window_handle
+        for handle in driver.window_handles:
+            driver.switch_to.window(handle)
+            driver.set_window_position(*position)
+        driver.switch_to.window(current)
+        return True
+    except Exception:
+        return False
+
+
+_CLICK_WATCH_JS = """
+var el = arguments[0];
+if (!el.__mcpClickWatched) {
+  el.__mcpClickWatched = true;
+  el.addEventListener('click', function () { window.__mcpUserClicked = true; }, true);
+}
+return window.__mcpUserClicked === true;
+"""
+
+
+def _await_user_click(driver, step: Step, ctx: ExecutionContext) -> Optional[str]:
+    """Hand the browser to the person until they click `target`.
+
+    Used for sign-in, which recordings leave out on purpose. Returns a note for
+    the step log describing what happened.
+
+    The click is spotted two ways, because a login usually navigates away the
+    instant it is pressed and takes the page's javascript with it: a listener
+    sets a flag, and the button going missing counts too.
+    """
+    grace_ms = int(step.options.get("skip_if_absent_ms", 5000))
+    sleep_ms = int(step.options.get("after_click_sleep_ms", 10000))
+    limit = step.wait_after.timeout_ms if step.wait_after else 300000
+
+    try:
+        element = resolve_element(
+            driver, step.target, timeout_ms=grace_ms, frame_context=ctx.frame_stack
+        )
+    except TargetResolutionError:
+        # No sign-in button in sight — most likely already signed in from a
+        # reused browser profile. Nothing to wait for.
+        return "sign-in control not present; assumed already signed in"
+
+    apply_window_mode(driver, "visible")
+
+    deadline = time.monotonic() + limit / 1000
+    while True:
+        try:
+            if driver.execute_script(_CLICK_WATCH_JS, element):
+                break
+        except (StaleElementReferenceException, UnexpectedAlertPresentException):
+            break  # page moved on, or a dialog came up: the click happened
+        except Exception:
+            break
+
+        try:
+            if not element.is_displayed():
+                break
+        except Exception:
+            break
+
+        if time.monotonic() >= deadline:
+            raise TimeoutError(
+                f"step '{step.id}': waited {limit}ms for the user to sign in, but the "
+                "sign-in control was never pressed"
+            )
+        time.sleep(config.POLL_INTERVAL_SECONDS)
+
+    # Signing in cannot be observed directly, so give it a fixed moment to land.
+    time.sleep(sleep_ms / 1000)
+    return f"user signed in; waited {sleep_ms}ms for it to complete"
+
+
 def _set_checkbox(driver, step: Step, ctx: ExecutionContext, want_checked: bool) -> None:
     element = _find(driver, step, ctx)
     if element.is_selected() != want_checked:
@@ -836,9 +953,12 @@ def dispatch(
         ActionChains(driver).drag_and_drop(source, drop_target).perform()
     elif action == ActionType.INPUT.value:
         element = _find(driver, step, ctx)
-        if step.options.get("clear_first", True):
-            element.clear()
-        element.send_keys(_stringify(resolve_value(step.value, bound_vars, extracted)))
+        _type_into(
+            driver,
+            element,
+            _stringify(resolve_value(step.value, bound_vars, extracted)),
+            clear_first=step.options.get("clear_first", True),
+        )
     elif action == ActionType.CLEAR.value:
         _find(driver, step, ctx).clear()
     elif action == ActionType.KEY_PRESS.value:
@@ -898,6 +1018,10 @@ def dispatch(
         return {step.extract_as: path} if step.extract_as else None
     elif action == ActionType.WAIT.value:
         perform_wait(driver, _wait_from_options(step), ctx)
+    elif action == ActionType.AWAIT_USER_CLICK.value:
+        return {"__note__": _await_user_click(driver, step, ctx)}
+    elif action == ActionType.WINDOW_MODE.value:
+        apply_window_mode(driver, str(step.options.get("mode", "background")))
 
     else:
         raise UnsupportedActionError(f"step '{step.id}': unknown action '{action}'")
