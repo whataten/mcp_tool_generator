@@ -1,0 +1,602 @@
+{
+  "schema_version": 1,
+  "id": "recorded_scenario",
+  "name": "Recorded Scenario",
+  "description": "메일 송신 테스트",
+  "start_url": "http://swp.posco.net/",
+  "variables": {},
+  "steps": [
+    {
+      "id": "step_001",
+      "action": "click",
+      "target": {
+        "selectors": [
+          {
+            "type": "css",
+            "value": "#scheme"
+          },
+          {
+            "type": "css",
+            "value": "a#scheme"
+          }
+        ]
+      },
+      "wait_after": {
+        "timeout_ms": 3000
+      }
+    },
+    {
+      "id": "step_002",
+      "action": "open_tab",
+      "target": {
+        "selectors": [
+          {
+            "type": "css",
+            "value": "li#\\35 32339 > a > span > img"
+          }
+        ]
+      },
+      "wait_after": {
+        "timeout_ms": 3000
+      },
+      "options": {
+        "trigger": "click_target"
+      },
+      "extract_as": "tab_2"
+    },
+    {
+      "id": "step_003_switch_tab",
+      "action": "switch_tab",
+      "options": {
+        "tab_ref": {
+          "type": "extracted_ref",
+          "name": "tab_2"
+        }
+      }
+    },
+    {
+      "id": "step_004",
+      "action": "focus",
+      "target": {
+        "selectors": [
+          {
+            "type": "css",
+            "value": "div#Lnb > div > a"
+          },
+          {
+            "type": "text",
+            "value": "메일쓰기",
+            "exact": true
+          }
+        ]
+      },
+      "wait_after": {
+        "timeout_ms": 3000
+      }
+    },
+    {
+      "id": "step_005",
+      "action": "open_tab",
+      "target": {
+        "selectors": [
+          {
+            "type": "css",
+            "value": "div#Lnb > div > a"
+          },
+          {
+            "type": "text",
+            "value": "메일쓰기",
+            "exact": true
+          }
+        ]
+      },
+      "wait_after": {
+        "timeout_ms": 3000
+      },
+      "options": {
+        "trigger": "click_target"
+      },
+      "extract_as": "tab_3"
+    },
+    {
+      "id": "step_006_switch_tab",
+      "action": "switch_tab",
+      "options": {
+        "tab_ref": {
+          "type": "extracted_ref",
+          "name": "tab_3"
+        }
+      }
+    },
+    {
+      "id": "step_007",
+      "action": "focus",
+      "target": {
+        "selectors": [
+          {
+            "type": "css",
+            "value": "#dext_body"
+          },
+          {
+            "type": "css",
+            "value": "body#dext_body"
+          }
+        ],
+        "frame_path": [
+          {
+            "type": "css",
+            "value": "#dext_frame_WEC"
+          },
+          {
+            "type": "css",
+            "value": "#dext5_design_WEC"
+          }
+        ]
+      },
+      "wait_after": {
+        "timeout_ms": 3000
+      }
+    },
+    {
+      "id": "step_008",
+      "action": "focus",
+      "target": {
+        "selectors": [
+          {
+            "type": "css",
+            "value": "#dext_body"
+          },
+          {
+            "type": "css",
+            "value": "body#dext_body"
+          }
+        ],
+        "frame_path": [
+          {
+            "type": "css",
+            "value": "#dext_frame_WEC"
+          },
+          {
+            "type": "css",
+            "value": "#dext5_design_WEC"
+          }
+        ]
+      },
+      "wait_after": {
+        "timeout_ms": 3000
+      }
+    },
+    {
+      "id": "step_009",
+      "action": "blur",
+      "target": {
+        "selectors": [
+          {
+            "type": "css",
+            "value": "#dext_body"
+          },
+          {
+            "type": "css",
+            "value": "body#dext_body"
+          }
+        ],
+        "frame_path": [
+          {
+            "type": "css",
+            "value": "#dext_frame_WEC"
+          },
+          {
+            "type": "css",
+            "value": "#dext5_design_WEC"
+          }
+        ]
+      },
+      "wait_after": {
+        "timeout_ms": 3000
+      }
+    },
+    {
+      "id": "step_010",
+      "action": "focus",
+      "target": {
+        "selectors": [
+          {
+            "type": "css",
+            "value": "#token-input-send_to"
+          },
+          {
+            "type": "css",
+            "value": "input#token-input-send_to"
+          }
+        ]
+      },
+      "wait_after": {
+        "timeout_ms": 3000
+      }
+    },
+    {
+      "id": "step_011",
+      "action": "click",
+      "target": {
+        "selectors": [
+          {
+            "type": "css",
+            "value": "#token-input-send_to"
+          },
+          {
+            "type": "css",
+            "value": "input#token-input-send_to"
+          }
+        ]
+      },
+      "wait_after": {
+        "timeout_ms": 3000
+      }
+    },
+    {
+      "id": "step_012",
+      "action": "input",
+      "target": {
+        "selectors": [
+          {
+            "type": "css",
+            "value": "#token-input-send_to"
+          },
+          {
+            "type": "css",
+            "value": "input#token-input-send_to"
+          }
+        ]
+      },
+      "value": {
+        "type": "literal",
+        "value": "ten@poscodx.com"
+      },
+      "wait_after": {
+        "timeout_ms": 3000
+      }
+    },
+    {
+      "id": "step_013",
+      "action": "click",
+      "target": {
+        "selectors": [
+          {
+            "type": "css",
+            "value": "#token-input-send_to"
+          },
+          {
+            "type": "css",
+            "value": "input#token-input-send_to"
+          }
+        ]
+      },
+      "wait_after": {
+        "timeout_ms": 3000
+      }
+    },
+    {
+      "id": "step_014",
+      "action": "blur",
+      "target": {
+        "selectors": [
+          {
+            "type": "css",
+            "value": "#token-input-send_to"
+          },
+          {
+            "type": "css",
+            "value": "input#token-input-send_to"
+          }
+        ]
+      },
+      "wait_after": {
+        "timeout_ms": 3000
+      }
+    },
+    {
+      "id": "step_015",
+      "action": "focus",
+      "target": {
+        "selectors": [
+          {
+            "type": "css",
+            "value": "input[name=\"Subject\"]"
+          },
+          {
+            "type": "css",
+            "value": "div#write_send_info > table:nth-of-type(2) > tbody > tr > td > input"
+          }
+        ]
+      },
+      "wait_after": {
+        "timeout_ms": 3000
+      }
+    },
+    {
+      "id": "step_016",
+      "action": "click",
+      "target": {
+        "selectors": [
+          {
+            "type": "css",
+            "value": "input[name=\"Subject\"]"
+          },
+          {
+            "type": "css",
+            "value": "div#write_send_info > table:nth-of-type(2) > tbody > tr > td > input"
+          }
+        ]
+      },
+      "wait_after": {
+        "timeout_ms": 3000
+      }
+    },
+    {
+      "id": "step_017",
+      "action": "input",
+      "target": {
+        "selectors": [
+          {
+            "type": "css",
+            "value": "input[name=\"Subject\"]"
+          },
+          {
+            "type": "css",
+            "value": "div#write_send_info > table:nth-of-type(2) > tbody > tr > td > input"
+          }
+        ]
+      },
+      "value": {
+        "type": "literal",
+        "value": "테스트"
+      },
+      "wait_after": {
+        "timeout_ms": 3000
+      }
+    },
+    {
+      "id": "step_018",
+      "action": "blur",
+      "target": {
+        "selectors": [
+          {
+            "type": "css",
+            "value": "input[name=\"Subject\"]"
+          },
+          {
+            "type": "css",
+            "value": "div#write_send_info > table:nth-of-type(2) > tbody > tr > td > input"
+          }
+        ]
+      },
+      "wait_after": {
+        "timeout_ms": 3000
+      }
+    },
+    {
+      "id": "step_019",
+      "action": "focus",
+      "target": {
+        "selectors": [
+          {
+            "type": "css",
+            "value": "#dext_body"
+          },
+          {
+            "type": "css",
+            "value": "body#dext_body"
+          }
+        ],
+        "frame_path": [
+          {
+            "type": "css",
+            "value": "#dext_frame_WEC"
+          },
+          {
+            "type": "css",
+            "value": "#dext5_design_WEC"
+          }
+        ]
+      },
+      "wait_after": {
+        "timeout_ms": 3000
+      }
+    },
+    {
+      "id": "step_020",
+      "action": "click",
+      "target": {
+        "selectors": [
+          {
+            "type": "css",
+            "value": "body#dext_body > p:nth-of-type(4)"
+          }
+        ],
+        "frame_path": [
+          {
+            "type": "css",
+            "value": "#dext_frame_WEC"
+          },
+          {
+            "type": "css",
+            "value": "#dext5_design_WEC"
+          }
+        ]
+      },
+      "wait_after": {
+        "timeout_ms": 3000
+      }
+    },
+    {
+      "id": "step_021",
+      "action": "input",
+      "target": {
+        "selectors": [
+          {
+            "type": "css",
+            "value": "#dext_body"
+          },
+          {
+            "type": "css",
+            "value": "body#dext_body"
+          }
+        ],
+        "frame_path": [
+          {
+            "type": "css",
+            "value": "#dext_frame_WEC"
+          },
+          {
+            "type": "css",
+            "value": "#dext5_design_WEC"
+          }
+        ]
+      },
+      "value": {
+        "type": "literal",
+        "value": "안녕하세요.\n\n마케팅DX그룹 플래닝물류섹션 박주영프로입니다.\n\n\n\n\n테스트입니다.\n\n\n\n\n감사합니다.\n\n박주영 드림.\n\n\n\n\n\t박주영    IT사업실 마케팅DX그룹 플래닝물류섹션 / 프로\t\n\n\n판교 8층\n\n\nTel. 010-4760-0692E-mail. jyp0406@poscodx.com\n\n\n\n\n\n"
+      },
+      "wait_after": {
+        "timeout_ms": 3000
+      }
+    },
+    {
+      "id": "step_022",
+      "action": "blur",
+      "target": {
+        "selectors": [
+          {
+            "type": "css",
+            "value": "#dext_body"
+          },
+          {
+            "type": "css",
+            "value": "body#dext_body"
+          }
+        ],
+        "frame_path": [
+          {
+            "type": "css",
+            "value": "#dext_frame_WEC"
+          },
+          {
+            "type": "css",
+            "value": "#dext5_design_WEC"
+          }
+        ]
+      },
+      "wait_after": {
+        "timeout_ms": 3000
+      }
+    },
+    {
+      "id": "step_023",
+      "action": "focus",
+      "target": {
+        "selectors": [
+          {
+            "type": "css",
+            "value": "div#memo_content > div > ul > li > a"
+          },
+          {
+            "type": "text",
+            "value": "보내기",
+            "exact": true
+          }
+        ]
+      },
+      "wait_after": {
+        "timeout_ms": 3000
+      }
+    },
+    {
+      "id": "step_024",
+      "action": "click",
+      "target": {
+        "selectors": [
+          {
+            "type": "css",
+            "value": "div#memo_content > div > ul > li > a"
+          },
+          {
+            "type": "text",
+            "value": "보내기",
+            "exact": true
+          }
+        ]
+      },
+      "wait_after": {
+        "timeout_ms": 3000
+      }
+    },
+    {
+      "id": "step_025",
+      "action": "alert",
+      "alert_action": "accept",
+      "extract_as": "dialog_message_025",
+      "wait_after": {
+        "timeout_ms": 3000
+      }
+    },
+    {
+      "id": "step_026",
+      "action": "close_tab"
+    },
+    {
+      "id": "step_027",
+      "action": "focus",
+      "target": {
+        "selectors": [
+          {
+            "type": "css",
+            "value": "div#Lnb > div > a"
+          },
+          {
+            "type": "text",
+            "value": "메일쓰기",
+            "exact": true
+          }
+        ]
+      },
+      "wait_after": {
+        "timeout_ms": 3000
+      }
+    },
+    {
+      "id": "step_028",
+      "action": "blur",
+      "target": {
+        "selectors": [
+          {
+            "type": "css",
+            "value": "div#Lnb > div > a"
+          },
+          {
+            "type": "text",
+            "value": "메일쓰기",
+            "exact": true
+          }
+        ]
+      },
+      "wait_after": {
+        "timeout_ms": 3000
+      }
+    }
+  ],
+  "outputs": [
+    "dialog_message_025"
+  ],
+  "metadata": {
+    "recorded_at": "2026-10-07T15:43:26.928208+09:00",
+    "finished_at": "2026-10-07T15:43:57.318276+09:00",
+    "raw_event_count": 51,
+    "recorder_version": "0.2.0",
+    "dialog_messages": {
+      "dialog_message_025": "첨부 문서가 없는 메일 입니다.\n메일을 발송 하시겠습니까?"
+    },
+    "warnings": [
+      "cross-origin iframe 안의 'click' 조작은 iframe 경로(frame_path)를 끝까지 알 수 없어 일부만 기록했습니다."
+    ]
+  }
+}

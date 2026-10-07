@@ -166,6 +166,10 @@ class ActionType(str, Enum):
     ASSERT = "assert"
     SCREENSHOT = "screenshot"
     WAIT = "wait"
+    # Executor extensions, used by the login prelude (see config.py). Section 13
+    # of the rule document allows adding action types this way.
+    AWAIT_USER_CLICK = "await_user_click"
+    WINDOW_MODE = "window_mode"
 
 
 # Events the recorder writes down so a trace can be read back, not instructions
@@ -192,6 +196,7 @@ _NEEDS_TARGET = frozenset(
         ActionType.BLUR.value,
         ActionType.EXTRACT.value,
         ActionType.ASSERT.value,
+        ActionType.AWAIT_USER_CLICK.value,
     }
 )
 
@@ -269,7 +274,11 @@ class Recording(BaseModel):
     schema_version: int = 1
     id: str
     name: str
-    description: str = Field(min_length=10)
+    # Only emptiness is rejected. This text is all an LLM has to pick this tool
+    # out from the others, so a short one is worth flagging — but the recorder
+    # writes it automatically, and refusing to register the tool over it would
+    # be far worse than a warning (see recording_loader).
+    description: str = Field(min_length=1)
     start_url: str
     variables: dict[str, VariableSpec] = {}
     steps: list[Step] = Field(min_length=1)

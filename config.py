@@ -52,6 +52,27 @@ KEEP_BROWSER_OPEN = os.environ.get("MCP_TOOL_GENERATOR_KEEP_BROWSER", "1") == "1
 # what keeps a replay from dying the moment an unexpected notice pops up.
 ALERT_ACTION = os.environ.get("MCP_TOOL_GENERATOR_ALERT_ACTION", "accept").strip().lower()
 
+# Login is deliberately left out of recordings — capturing credentials would be
+# a security problem — but most systems need it first. These steps run ahead of
+# every recording: open start_url, wait for the person to sign in by hand, then
+# get the window out of the way before the recorded steps run.
+#
+# Off by default so local runs don't sit waiting for a human. Point it at a
+# prelude file to turn it on.
+LOGIN_PRELUDE_FILE = os.environ.get("MCP_TOOL_GENERATOR_LOGIN_PRELUDE") or None
+
+# After signing in, the system usually lands on its own home page rather than
+# the page the recording starts from, so go back to start_url before replaying.
+LOGIN_PRELUDE_RENAVIGATE = os.environ.get("MCP_TOOL_GENERATOR_LOGIN_RENAVIGATE", "1") == "1"
+
+# Reusing one browser profile keeps the session cookie, so a later tool call can
+# find itself already signed in instead of asking the person again.
+USER_DATA_DIR = os.environ.get("MCP_TOOL_GENERATOR_USER_DATA_DIR") or None
+
+# Where a window sits when visible, and where it goes to get out of the way.
+VISIBLE_WINDOW_POSITION = (40, 40)
+OFFSCREEN_WINDOW_POSITION = (-32000, -32000)
+
 # "edge" (default) or "chrome"
 BROWSER = os.environ.get("MCP_TOOL_GENERATOR_BROWSER", "edge")
 
