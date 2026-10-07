@@ -13,6 +13,7 @@ from selenium import webdriver
 from selenium.common.exceptions import (
     ElementClickInterceptedException,
     ElementNotInteractableException,
+    InvalidSelectorException,
     NoAlertPresentException,
     NoSuchElementException,
     NoSuchWindowException,
@@ -31,12 +32,59 @@ import config
 from schema import ActionType, Selector, SelectorType, Step, Target, WaitUntil
 
 
+def _selector_problem(sel: Selector) -> Optional[str]:
+    """Why a selector could never match, if that is already knowable."""
+    if not sel.is_known:
+        return "unsupported selector type"
+    try:
+        by, value = _locator_for(sel)
+    except UnknownSelectorType as e:
+        return str(e)
+    if by == By.CSS_SELECTOR and re.match(r"^\s*#\d", value):
+        # A CSS id cannot begin with a digit; the browser rejects it outright.
+        return "invalid CSS: an id starting with a digit needs [id=\"...\"] instead"
+    return None
+
+
+def _describe_selector(sel: Selector) -> str:
+    """How a selector is reported when it fails to match.
+
+    An `html` selector is shown with the lookup it was turned into: the raw
+    markup cannot be searched for in dev tools (attribute order and quoting
+    differ from the live DOM), but the derived selector can be.
+    """
+    if sel.type == SelectorType.HTML:
+        derived = _css_from_html(sel.value)
+        shown = (sel.value[:60] + "...") if len(sel.value) > 60 else sel.value
+        if derived:
+            return f"html={shown!r} (searched as {derived!r})"
+        return f"html={shown!r} (nothing in it identifies an element)"
+
+    problem = _selector_problem(sel)
+    if problem:
+        return f"{sel.type}={sel.value!r} (skipped: {problem})"
+    return f"{sel.type}={sel.value!r}"
+
+
+def selector_report(sel: Selector) -> dict:
+    """A selector as it appears in a failure result."""
+    entry = {"type": sel.type, "value": sel.value}
+    if sel.type == SelectorType.HTML:
+        # The lookup it became — this is the part worth pasting into dev tools.
+        entry["searched_as"] = _css_from_html(sel.value)
+    else:
+        problem = _selector_problem(sel)
+        if problem:
+            entry["skipped"] = problem
+    return entry
+
+
 class TargetResolutionError(Exception):
     def __init__(self, selectors: list[Selector], timeout_ms: int, found_hidden: bool = False):
         self.selectors = selectors
         self.timeout_ms = timeout_ms
         self.found_hidden = found_hidden
-        attempted = ", ".join(f"{s.type}={s.value!r}" for s in selectors)
+        attempted = ", ".join(_describe_selector(s) for s in selectors)
         if found_hidden:
             # Worth separating: the page is the right one and the selector is
             # correct, the element just never became visible. "Not found" would
@@ -313,6 +361,10 @@ def _scan(driver, target: Target, require_visible: bool):
         except UnknownSelectorType:
             # A type this executor does not know. The other candidates in the
             # list are what the fallback order is for.
+            continue
+        except InvalidSelectorException:
+            # Malformed for the browser — an id starting with a digit written
+            # as "#73456", say. Same story: let the next candidate try.
             continue
         except (StaleElementReferenceException, NoSuchElementException):
             continue
