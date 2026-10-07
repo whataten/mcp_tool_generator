@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head><meta charset="UTF-8" /><title>Numeric Id (Test Fixture)</title></head>
+<body>
+  <h1>포털 메뉴 (숫자 id + 숨은 런처 재현)</h1>
+  <ul>
+    <li id="73456"><a href="#"><span><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" alt="메일"></span></a></li>
+  </ul>
+  <a id="scheme" href="#" style="display:none">launcher</a>
+  <div id="result">아직</div>
+  <script>
+    document.getElementById("73456").addEventListener("click", function () {
+      document.getElementById("result").textContent = "메뉴 클릭됨";
+    });
+    document.getElementById("scheme").addEventListener("click", function () {
+      document.getElementById("result").textContent = "런처 실행됨";
+    });
+  </script>
+</body>
+</html>

@@ -170,9 +170,84 @@ def _xpath_literal(value: str) -> str:
     return "concat(" + ", \"'\", ".join(f"'{p}'" for p in parts) + ")"
 
 
+_HTML_TAG_RE = re.compile(r"<\s*([a-zA-Z][\w-]*)((?:\s+[^<>]*?)?)/?\s*>")
+_HTML_ATTR_RE = re.compile(r'([:\w.-]+)\s*=\s*(?:"([^"]*)"|\'([^\']*)\')')
+
+# Attributes worth identifying an element by. Ordered: the earlier ones pin a
+# single element down, the later ones only narrow the field.
+_HTML_IDENTIFYING_ATTRS = (
+    "name",
+    "data-testid",
+    "data-test-id",
+    "aria-label",
+    "placeholder",
+    "title",
+    "href",
+    "src",
+    "alt",
+    "type",
+    "value",
+)
+
+
+def _css_from_html(snippet: str) -> Optional[str]:
+    """Turn an element's HTML back into a CSS selector.
+
+    The recorder writes a `html` selector holding the element's own markup.
+    Only distinguishing parts are used — an id, then identifying attributes,
+    then classes. A bare tag name is refused rather than guessed at, because
+    matching the wrong element silently is worse than failing to find one.
+    """
+    text = (snippet or "").strip()
+    if not text:
+        return None
+
+    def quoted_id(value: str) -> str:
+        return value.replace("\\", "\\\\").replace('"', '\\"')
+
+    if "<" not in text:
+        # Not markup at all — just the element's id, which is how the value
+        # often arrives. An attribute selector avoids having to escape ids that
+        # start with a digit, which this portal's markup is full of.
+        return f'[id="{quoted_id(text)}"]'
+
+    match = _HTML_TAG_RE.search(text)
+    if not match:
+        return None
+
+    tag = match.group(1).lower()
+    attrs: dict[str, str] = {}
+    for attr in _HTML_ATTR_RE.finditer(match.group(2) or ""):
+        name = attr.group(1).lower()
+        attrs[name] = attr.group(2) if attr.group(2) is not None else (attr.group(3) or "")
+
+    def quoted(value: str) -> str:
+        return value.replace("\\", "\\\\").replace('"', '\\"')
+
+    # An attribute selector sidesteps escaping ids that start with a digit,
+    # which the portal's markup is full of.
+    if attrs.get("id"):
+        return f'{tag}[id="{quoted(attrs["id"])}"]'
+
+    parts = [tag]
+    for key in _HTML_IDENTIFYING_ATTRS:
+        if attrs.get(key):
+            parts.append(f'[{key}="{quoted(attrs[key])}"]')
+    for cls in (attrs.get("class") or "").split():
+        parts.append(f".{cls}")
+
+    return "".join(parts) if len(parts) > 1 else None
+
+
 def _locator_for(sel: Selector) -> tuple[str, str]:
     if sel.type == SelectorType.CSS:
         return (By.CSS_SELECTOR, sel.value)
+    if sel.type == SelectorType.HTML:
+        css = _css_from_html(sel.value)
+        if not css:
+            # Nothing in the markup pins down which element it was.
+            raise UnknownSelectorType("html (no identifying attributes)")
+        return (By.CSS_SELECTOR, css)
     if sel.type == SelectorType.XPATH:
         return (By.XPATH, sel.value)
     if sel.type == SelectorType.TEST_ID:
