@@ -12,6 +12,7 @@ from typing import Any, Optional
 from selenium import webdriver
 from selenium.common.exceptions import (
     ElementClickInterceptedException,
+    ElementNotInteractableException,
     NoAlertPresentException,
     NoSuchElementException,
     NoSuchWindowException,
@@ -31,11 +32,21 @@ from schema import ActionType, Selector, SelectorType, Step, Target, WaitUntil
 
 
 class TargetResolutionError(Exception):
-    def __init__(self, selectors: list[Selector], timeout_ms: int):
+    def __init__(self, selectors: list[Selector], timeout_ms: int, found_hidden: bool = False):
         self.selectors = selectors
         self.timeout_ms = timeout_ms
+        self.found_hidden = found_hidden
         attempted = ", ".join(f"{s.type.value}={s.value!r}" for s in selectors)
-        super().__init__(f"no selector matched within {timeout_ms}ms (tried: {attempted})")
+        if found_hidden:
+            # Worth separating: the page is the right one and the selector is
+            # correct, the element just never became visible. "Not found" would
+            # send someone off hunting for the wrong problem.
+            super().__init__(
+                f"matched an element but it was never visible within {timeout_ms}ms "
+                f"(tried: {attempted})"
+            )
+        else:
+            super().__init__(f"no selector matched within {timeout_ms}ms (tried: {attempted})")
 
 
 class UnhandledAlertError(Exception):
@@ -206,15 +217,39 @@ def enter_frames(driver, frames: list[Selector]) -> None:
         driver.switch_to.frame(driver.find_element(by, value))
 
 
+def _scan(driver, target: Target, require_visible: bool):
+    """One pass over the selectors, in order. Returns the match, or None."""
+    for sel in target.selectors:
+        try:
+            by, value = _locator_for(sel)
+            matches = driver.find_elements(by, value)
+            if sel.type == SelectorType.ROLE and sel.role_name:
+                matches = [m for m in matches if _matches_role_name(m, sel)]
+            if require_visible:
+                matches = [m for m in matches if m.is_displayed()]
+            if len(matches) > target.nth:
+                return matches[target.nth]
+        except (StaleElementReferenceException, NoSuchElementException):
+            continue
+    return None
+
+
 def resolve_element(
     driver,
     target: Target,
     timeout_ms: Optional[int] = None,
     *,
     require_visible: bool = True,
+    allow_hidden: bool = False,
     frame_context: Optional[list[Selector]] = None,
 ):
-    """Find an element, trying each selector in order until one matches."""
+    """Find an element, trying each selector in order until one matches.
+
+    `allow_hidden` accepts an element that is in the page but not visible, once
+    nothing visible has turned up in time. Portals routinely drive things
+    through hidden launcher anchors, and a recording that clicked one has to be
+    able to click it again.
+    """
     limit = config.DEFAULT_TIMEOUT_MS if timeout_ms is None else timeout_ms
     deadline = time.monotonic() + limit / 1000
     frames = target.frame_path or frame_context or []
@@ -225,28 +260,21 @@ def resolve_element(
                 enter_frames(driver, frames)
             except Exception:
                 pass
-        for sel in target.selectors:
-            try:
-                by, value = _locator_for(sel)
-                matches = driver.find_elements(by, value)
-                if sel.type == SelectorType.ROLE and sel.role_name:
-                    matches = [m for m in matches if _matches_role_name(m, sel)]
-                if require_visible:
-                    matches = [m for m in matches if m.is_displayed()]
-                if len(matches) > target.nth:
-                    found = matches[target.nth]
-                    if target.scroll_into_view:
-                        try:
-                            driver.execute_script(
-                                "arguments[0].scrollIntoView({block: 'center'});", found
-                            )
-                        except Exception:
-                            pass
-                    return found
-            except (StaleElementReferenceException, NoSuchElementException):
-                continue
+
+        found = _scan(driver, target, require_visible)
+        if found is not None:
+            if target.scroll_into_view:
+                try:
+                    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", found)
+                except Exception:
+                    pass
+            return found
+
         if time.monotonic() >= deadline:
-            raise TargetResolutionError(target.selectors, limit)
+            hidden = _scan(driver, target, require_visible=False) if require_visible else None
+            if hidden is not None and allow_hidden:
+                return hidden
+            raise TargetResolutionError(target.selectors, limit, found_hidden=hidden is not None)
         time.sleep(config.POLL_INTERVAL_SECONDS)
 
 
@@ -554,12 +582,28 @@ _MODIFIER_KEYS = {
 }
 
 
+# Actions that still work on an element the page keeps out of sight: a click
+# falls back to javascript, and focus/blur/extract are javascript anyway.
+# Anything checking visibility must not take this escape hatch.
+_HIDDEN_OK_ACTIONS = frozenset(
+    {
+        ActionType.CLICK.value,
+        ActionType.DBLCLICK.value,
+        ActionType.RIGHT_CLICK.value,
+        ActionType.FOCUS.value,
+        ActionType.BLUR.value,
+        ActionType.EXTRACT.value,
+    }
+)
+
+
 def _find(driver, step: Step, ctx: ExecutionContext, *, require_visible: bool = True):
     return resolve_element(
         driver,
         step.target,
         timeout_ms=config.DEFAULT_TIMEOUT_MS,
         require_visible=require_visible,
+        allow_hidden=step.action in _HIDDEN_OK_ACTIONS,
         frame_context=ctx.frame_stack,
     )
 
@@ -579,7 +623,9 @@ def _click_element(driver, element, button: str = "left", click_count: int = 1) 
         return
     try:
         element.click()
-    except ElementClickInterceptedException:
+    except (ElementClickInterceptedException, ElementNotInteractableException):
+        # Either something is covering it, or it is a hidden launcher element
+        # the page only ever clicks from script. Both work this way.
         driver.execute_script("arguments[0].click();", element)
 
 
