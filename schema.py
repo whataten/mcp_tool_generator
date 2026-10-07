@@ -65,10 +65,21 @@ class SelectorType(str, Enum):
 
 
 class Selector(BaseModel):
-    type: SelectorType
+    # A plain string, not the enum, for the same reason Step.action is: a
+    # selector type this executor has not learned yet must not take the whole
+    # recording offline. Unknown ones are skipped as candidates, and the
+    # remaining selectors in the list still do their job.
+    type: str
     value: str
     exact: bool = True
     role_name: Optional[str] = None
+
+    @property
+    def is_known(self) -> bool:
+        return self.type in _KNOWN_SELECTOR_TYPES
+
+
+_KNOWN_SELECTOR_TYPES = frozenset(t.value for t in SelectorType)
 
 
 class Target(BaseModel):

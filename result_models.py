@@ -34,6 +34,7 @@ class ErrorDetail(BaseModel):
         "tab_not_found",
         "assertion_failed",
         "unsupported_action",
+        "unsupported_selector",
         "value_error",
         "unknown",
     ]
