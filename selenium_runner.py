@@ -13,6 +13,7 @@ from selenium import webdriver
 from selenium.common.exceptions import (
     ElementClickInterceptedException,
     ElementNotInteractableException,
+    InvalidSelectorException,
     NoAlertPresentException,
     NoSuchElementException,
     NoSuchWindowException,
@@ -31,6 +32,20 @@ import config
 from schema import ActionType, Selector, SelectorType, Step, Target, WaitUntil
 
 
+def _selector_problem(sel: Selector) -> Optional[str]:
+    """Why a selector could never match, if that is already knowable."""
+    if not sel.is_known:
+        return "unsupported selector type"
+    try:
+        by, value = _locator_for(sel)
+    except UnknownSelectorType as e:
+        return str(e)
+    if by == By.CSS_SELECTOR and re.match(r"^\s*#\d", value):
+        # A CSS id cannot begin with a digit; the browser rejects it outright.
+        return "invalid CSS: an id starting with a digit needs [id=\"...\"] instead"
+    return None
+
+
 def _describe_selector(sel: Selector) -> str:
     """How a selector is reported when it fails to match.
 
@@ -44,6 +59,10 @@ def _describe_selector(sel: Selector) -> str:
         if derived:
             return f"html={shown!r} (searched as {derived!r})"
         return f"html={shown!r} (nothing in it identifies an element)"
+
+    problem = _selector_problem(sel)
+    if problem:
+        return f"{sel.type}={sel.value!r} (skipped: {problem})"
     return f"{sel.type}={sel.value!r}"
 
 
@@ -53,6 +72,10 @@ def selector_report(sel: Selector) -> dict:
     if sel.type == SelectorType.HTML:
         # The lookup it became — this is the part worth pasting into dev tools.
         entry["searched_as"] = _css_from_html(sel.value)
+    else:
+        problem = _selector_problem(sel)
+        if problem:
+            entry["skipped"] = problem
     return entry
 
 
@@ -338,6 +361,10 @@ def _scan(driver, target: Target, require_visible: bool):
         except UnknownSelectorType:
             # A type this executor does not know. The other candidates in the
             # list are what the fallback order is for.
+            continue
+        except InvalidSelectorException:
+            # Malformed for the browser — an id starting with a digit written
+            # as "#73456", say. Same story: let the next candidate try.
             continue
         except (StaleElementReferenceException, NoSuchElementException):
             continue
