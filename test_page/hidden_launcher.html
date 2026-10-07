@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head><meta charset="UTF-8" /><title>Hidden Launcher (Test Fixture)</title></head>
+<body>
+  <h1>포털 (숨은 런처 앵커 재현)</h1>
+  <!-- 사내 포털의 프로토콜 런처처럼, 화면에 안 보이지만 클릭으로 창을 띄우는 앵커 -->
+  <a id="scheme" href="#" style="display:none">launcher</a>
+  <div id="result">아직</div>
+  <script>
+    document.getElementById("scheme").addEventListener("click", function () {
+      document.getElementById("result").textContent = "런처 실행됨";
+    });
+  </script>
+</body>
+</html>
