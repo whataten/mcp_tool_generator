@@ -84,7 +84,14 @@ def load_login_prelude() -> list[Step]:
         with open(path, "r", encoding="utf-8") as f:
             raw = json.load(f)
     except OSError as e:
-        print(f"[WARN] login prelude {path} could not be read: {e}", file=sys.stderr)
+        # Worth shouting about: carrying on without it means not waiting for
+        # sign-in, and every step then fails on a login page for no obvious
+        # reason.
+        print(
+            f"[ERROR] login prelude could not be read, so NO ONE WILL BE ASKED TO SIGN IN: "
+            f"{path} ({e})",
+            file=sys.stderr,
+        )
         return []
     except json.JSONDecodeError as e:
         print(f"[WARN] login prelude {path} is not valid JSON: {e}", file=sys.stderr)

@@ -59,7 +59,14 @@ ALERT_ACTION = os.environ.get("MCP_TOOL_GENERATOR_ALERT_ACTION", "accept").strip
 #
 # Off by default so local runs don't sit waiting for a human. Point it at a
 # prelude file to turn it on.
-LOGIN_PRELUDE_FILE = os.environ.get("MCP_TOOL_GENERATOR_LOGIN_PRELUDE") or None
+# A relative path is taken from the project folder, not from wherever the
+# server happened to be started — an MCP client launches it with a working
+# directory of its own choosing, and a prelude that silently fails to load
+# would mean no waiting for sign-in at all.
+_prelude = os.environ.get("MCP_TOOL_GENERATOR_LOGIN_PRELUDE") or None
+LOGIN_PRELUDE_FILE = (
+    None if not _prelude else _prelude if os.path.isabs(_prelude) else os.path.join(BASE_DIR, _prelude)
+)
 
 # After signing in, the system usually lands on its own home page rather than
 # the page the recording starts from, so go back to start_url before replaying.
