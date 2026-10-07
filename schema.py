@@ -62,6 +62,9 @@ class SelectorType(str, Enum):
     TEST_ID = "test_id"
     ARIA_LABEL = "aria_label"
     PLACEHOLDER = "placeholder"
+    # Not in section 4, but the recorder emits it: the element's own HTML,
+    # which the executor turns back into a lookup.
+    HTML = "html"
 
 
 class Selector(BaseModel):
