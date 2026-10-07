@@ -32,10 +32,12 @@ def _classify_error(exc: Exception, step: Step) -> ErrorDetail:
             action=step.action,
             message=str(exc),
             error_type="selector_not_found",
-            attempted_selectors=[{"type": s.type.value, "value": s.value} for s in exc.selectors],
+            attempted_selectors=[{"type": s.type, "value": s.value} for s in exc.selectors],
         )
 
-    if isinstance(exc, sr.TabNotFoundError):
+    if isinstance(exc, sr.UnknownSelectorType):
+        error_type = "unsupported_selector"
+    elif isinstance(exc, sr.TabNotFoundError):
         error_type = "tab_not_found"
     elif isinstance(exc, sr.AssertionFailedError):
         error_type = "assertion_failed"

@@ -36,7 +36,7 @@ class TargetResolutionError(Exception):
         self.selectors = selectors
         self.timeout_ms = timeout_ms
         self.found_hidden = found_hidden
-        attempted = ", ".join(f"{s.type.value}={s.value!r}" for s in selectors)
+        attempted = ", ".join(f"{s.type}={s.value!r}" for s in selectors)
         if found_hidden:
             # Worth separating: the page is the right one and the selector is
             # correct, the element just never became visible. "Not found" would
@@ -65,6 +65,12 @@ class AssertionFailedError(Exception):
 
 class UnsupportedActionError(Exception):
     pass
+
+
+class UnknownSelectorType(Exception):
+    def __init__(self, selector_type: str):
+        self.selector_type = selector_type
+        super().__init__(f"unknown selector type {selector_type!r}")
 
 
 # --------------------------------------------------------------------------
@@ -199,7 +205,7 @@ def _locator_for(sel: Selector) -> tuple[str, str]:
         }.get(sel.value, "")
         css = f'[role="{sel.value}"]'
         return (By.CSS_SELECTOR, f"{css}, {implicit}" if implicit else css)
-    raise ValueError(f"unsupported selector type: {sel.type}")
+    raise UnknownSelectorType(sel.type)
 
 
 def _matches_role_name(element, sel: Selector) -> bool:
@@ -229,6 +235,10 @@ def _scan(driver, target: Target, require_visible: bool):
                 matches = [m for m in matches if m.is_displayed()]
             if len(matches) > target.nth:
                 return matches[target.nth]
+        except UnknownSelectorType:
+            # A type this executor does not know. The other candidates in the
+            # list are what the fallback order is for.
+            continue
         except (StaleElementReferenceException, NoSuchElementException):
             continue
     return None
@@ -253,6 +263,12 @@ def resolve_element(
     limit = config.DEFAULT_TIMEOUT_MS if timeout_ms is None else timeout_ms
     deadline = time.monotonic() + limit / 1000
     frames = target.frame_path or frame_context or []
+
+    if not any(sel.is_known for sel in target.selectors):
+        # Nothing here can be looked up, so waiting the timeout out would only
+        # hide why.
+        kinds = sorted({sel.type for sel in target.selectors})
+        raise UnknownSelectorType(", ".join(kinds))
 
     while True:
         if frames:
