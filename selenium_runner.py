@@ -40,9 +40,6 @@ def _selector_problem(sel: Selector) -> Optional[str]:
         by, value = _locator_for(sel)
     except UnknownSelectorType as e:
         return str(e)
-    if by == By.CSS_SELECTOR and re.match(r"^\s*#\d", value):
-        # A CSS id cannot begin with a digit; the browser rejects it outright.
-        return "invalid CSS: an id starting with a digit needs [id=\"...\"] instead"
     return None
 
 
@@ -63,6 +60,10 @@ def _describe_selector(sel: Selector) -> str:
     problem = _selector_problem(sel)
     if problem:
         return f"{sel.type}={sel.value!r} (skipped: {problem})"
+    if sel.type == SelectorType.CSS:
+        repaired = _repair_numeric_ids(sel.value)
+        if repaired != sel.value:
+            return f"css={sel.value!r} (searched as {repaired!r})"
     return f"{sel.type}={sel.value!r}"
 
 
@@ -287,9 +288,38 @@ def _css_from_html(snippet: str) -> Optional[str]:
     return "".join(parts) if len(parts) > 1 else None
 
 
+_NUMERIC_ID_RE = re.compile(r"#(\d[\w-]*)")
+
+
+def _repair_numeric_ids(css: str) -> str:
+    """Rewrite `#123abc` as `[id="123abc"]`.
+
+    A CSS id cannot begin with a digit, so the browser rejects the selector
+    outright — but this portal's ids are numeric, and `#73456` can only have
+    meant one thing. Quoted sections are left alone so an href like
+    `[href="#73456"]` is not mangled.
+    """
+    out, buf, quote = [], [], None
+    for ch in css:
+        if quote:
+            out.append(ch)
+            if ch == quote:
+                quote = None
+            continue
+        if ch in "'\"":
+            out.append(_NUMERIC_ID_RE.sub(r'[id="\1"]', "".join(buf)))
+            buf = []
+            out.append(ch)
+            quote = ch
+            continue
+        buf.append(ch)
+    out.append(_NUMERIC_ID_RE.sub(r'[id="\1"]', "".join(buf)))
+    return "".join(out)
+
+
 def _locator_for(sel: Selector) -> tuple[str, str]:
     if sel.type == SelectorType.CSS:
-        return (By.CSS_SELECTOR, sel.value)
+        return (By.CSS_SELECTOR, _repair_numeric_ids(sel.value))
     if sel.type == SelectorType.HTML:
         css = _css_from_html(sel.value)
         if not css:
