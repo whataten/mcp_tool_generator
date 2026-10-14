@@ -247,6 +247,46 @@ set MCP_TOOL_GENERATOR_USER_DATA_DIR=C:\work\edge-profile
 
 ---
 
+## 5-5. 기동 로그로 먼저 확인하기
+
+서버를 띄우면 **적용된 설정 전체와 경고**가 stderr에 출력됩니다. 문제가 생기면 여기부터 보세요.
+
+```
+[WARN] setting: MCP_TOOL_GENERATOR_ALERT_ACTION='dismis' is not one of accept, dismiss, error; using 'accept'
+[INFO] settings in effect:
+[INFO]   browser = edge
+[INFO]   window_mode = headless
+[INFO]   driver_path = (auto-download)
+[INFO]   login_prelude = (off — no wait for sign-in)
+...
+[WARN] .../auto_mailing.json: description is very short (...)
+[INFO] registered 7 tool(s): ...
+```
+
+- **`[WARN] setting:`** — 환경변수 오타입니다. **값이 무시되고 기본값으로 동작**하므로 반드시 고치세요
+- **`login_prelude = (off ...)`** — 로그인 대기가 꺼져 있다는 뜻입니다. 사내 시스템이면 켜야 합니다
+- **`driver_path = (auto-download)`** — 인터넷 없는 곳에서는 실패합니다
+
+**스텝별 상세 로그**가 필요하면:
+
+```
+set MCP_TOOL_GENERATOR_DEBUG=1
+```
+```
+[DEBUG] -> step_001 (click)
+[DEBUG]    step_001 ok (320ms)
+[DEBUG] -> step_002 (open_tab)
+[DEBUG]    step_002 failed: selector_not_found: no selector matched within 10000ms
+```
+
+결과 JSON에는 **브라우저·드라이버 버전**도 함께 담깁니다. 버전 불일치 추적에 쓰세요.
+
+```json
+"browser": { "name": "MicrosoftEdge", "browser_version": "131.0.2903.146", "driver_version": "131.0.2903.146" }
+```
+
+---
+
 ## 6. 문제 해결
 
 ### `SessionNotCreatedException`
@@ -273,6 +313,20 @@ Microsoft Edge failed to start: exited normally.
 - 로그인 화면에 멈춰 있다면 → 로그인 스텝이 레코딩에 없거나 실패한 것
 - 원하는 화면인데 못 찾는다면 → 셀렉터가 실제 DOM과 안 맞는 것 (F12로 확인)
 - 화면이 아직 로딩 중이라면 → 해당 스텝의 `wait_after.timeout_ms`를 늘리기
+
+### `driver_start_failed` — 브라우저가 아예 안 뜸
+결과에 `error_type: "driver_start_failed"`와 함께 **어떤 드라이버 경로를 썼는지**가 메시지에 나옵니다.
+거의 항상 브라우저/드라이버 버전 불일치이거나 드라이버 경로가 잘못된 경우입니다.
+`edge://version`으로 브라우저 버전을 확인해 드라이버와 맞추세요.
+
+### `browser_closed` — 실행 도중 브라우저가 사라짐
+창을 직접 닫으셨거나, 드라이버 프로세스가 죽은 경우입니다. 창을 보면서 테스트하실 때
+실수로 닫으면 이렇게 나옵니다.
+
+### `user_login_timeout` — 로그인 대기 시간 초과
+로그인 선행 처리가 켜져 있는데 정해진 시간 안에 로그인 버튼이 눌리지 않았습니다.
+`login_prelude.json`의 로그인 버튼 셀렉터가 맞는지 확인하세요 (셀렉터가 틀리면 버튼을
+눌러도 감지 못 합니다).
 
 ### `WinError 206` (설치 중)
 경로가 너무 깁니다. 프로젝트를 `C:\work\` 같은 짧은 경로로 옮기고 재시도하세요.

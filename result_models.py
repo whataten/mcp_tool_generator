@@ -35,6 +35,9 @@ class ErrorDetail(BaseModel):
         "assertion_failed",
         "unsupported_action",
         "unsupported_selector",
+        "driver_start_failed",
+        "browser_closed",
+        "user_login_timeout",
         "value_error",
         "unknown",
     ]
@@ -56,3 +59,6 @@ class ToolResult(BaseModel):
     screenshot_path: Optional[str] = None
     # Text of any javascript dialogs that were closed automatically, in order.
     alerts_handled: list[str] = []
+    # Browser and driver versions. A mismatch between them is the usual cause
+    # of a run that never starts, so it is worth having in the result.
+    browser: dict[str, Any] = {}

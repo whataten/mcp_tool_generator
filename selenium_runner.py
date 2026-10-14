@@ -20,6 +20,7 @@ from selenium.common.exceptions import (
     StaleElementReferenceException,
     UnexpectedAlertPresentException,
 )
+from selenium.common.exceptions import UnexpectedTagNameException
 from selenium.webdriver import ActionChains
 from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.common.by import By
@@ -164,6 +165,37 @@ def new_driver():
 # --------------------------------------------------------------------------
 # dialogs (section 9)
 # --------------------------------------------------------------------------
+def describe_browser(driver) -> dict:
+    """Browser and driver versions, for the result.
+
+    A driver that does not match the installed browser is the usual reason a
+    run dies on startup, and the two versions side by side settle it at a
+    glance.
+    """
+    try:
+        caps = driver.capabilities or {}
+    except Exception:
+        return {}
+    # Each vendor names it differently and buries it one level down:
+    # msedge.msedgedriverVersion, chrome.chromedriverVersion.
+    driver_version = None
+    for value in caps.values():
+        if not isinstance(value, dict):
+            continue
+        for key, found in value.items():
+            if key.lower().endswith("driverversion"):
+                driver_version = str(found).split(" ")[0]  # trim the build hash
+                break
+        if driver_version:
+            break
+
+    return {
+        "name": caps.get("browserName"),
+        "browser_version": caps.get("browserVersion"),
+        "driver_version": driver_version,
+    }
+
+
 def handle_alert(driver, how: str, alert_input: Optional[str] = None) -> Optional[str]:
     """Close an open dialog and return its text, or None if none was open."""
     try:
@@ -1183,7 +1215,16 @@ def dispatch(
     elif action == ActionType.KEY_PRESS.value:
         _key_press(driver, step, ctx)
     elif action == ActionType.SELECT_OPTION.value:
-        select = Select(_find(driver, step, ctx))
+        element = _find(driver, step, ctx)
+        try:
+            select = Select(element)
+        except UnexpectedTagNameException:
+            # Plenty of "dropdowns" are styled div/ul widgets rather than a
+            # real <select>; those need click steps, not select_option.
+            raise ValueError(
+                f"step '{step.id}': select_option needs a <select> element, but this is "
+                f"<{element.tag_name}> — a custom dropdown has to be clicked open instead"
+            )
         wanted = _stringify(resolve_value(step.value, bound_vars, extracted))
         by = step.options.get("by", "value")
         if by == "label":

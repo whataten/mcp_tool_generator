@@ -24,7 +24,9 @@ def load_all_recordings(recordings_dir: str) -> tuple[dict[str, Recording], list
     paths = sorted(glob.glob(os.path.join(recordings_dir, "*.json")))
     for path in paths:
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            # utf-8-sig: a file saved by a Windows editor often carries a BOM,
+            # which plain utf-8 refuses with a confusing "Unexpected UTF-8 BOM".
+            with open(path, "r", encoding="utf-8-sig") as f:
                 raw = json.load(f)
         except json.JSONDecodeError as e:
             errors.append(LoadError(path, f"invalid JSON: {e}"))
