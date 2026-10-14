@@ -10,6 +10,7 @@ from pydantic import ValidationError
 from selenium.common.exceptions import (
     ElementClickInterceptedException,
     NoAlertPresentException,
+    NoSuchWindowException,
     StaleElementReferenceException,
     TimeoutException,
     WebDriverException,
@@ -25,6 +26,17 @@ def _now() -> str:
     return datetime.datetime.now().astimezone().isoformat()
 
 
+def _first_line(exc: Exception) -> str:
+    """Selenium errors carry a stack trace; only the first line says anything."""
+    text = str(exc).strip()
+    return text.splitlines()[0] if text else exc.__class__.__name__
+
+
+def _debug(message: str) -> None:
+    if config.DEBUG:
+        print(f"[DEBUG] {message}", file=sys.stderr, flush=True)
+
+
 def _classify_error(exc: Exception, step: Step) -> ErrorDetail:
     if isinstance(exc, sr.TargetResolutionError):
         return ErrorDetail(
@@ -33,6 +45,26 @@ def _classify_error(exc: Exception, step: Step) -> ErrorDetail:
             message=str(exc),
             error_type="selector_not_found",
             attempted_selectors=[sr.selector_report(s) for s in exc.selectors],
+        )
+
+    lowered = str(exc).lower()
+    if (
+        "httpconnectionpool" in lowered
+        or "max retries exceeded" in lowered
+        or "connection refused" in lowered
+        or "connection aborted" in lowered
+    ):
+        # The driver process is gone — the browser was closed outright, or the
+        # driver died. Not a WebDriverException: it surfaces from the HTTP
+        # client underneath, so it has to be caught before the type checks.
+        return ErrorDetail(
+            step_id=step.id,
+            action=step.action,
+            message=(
+                "lost contact with the browser — it was closed, or the driver stopped "
+                f"({_first_line(exc)})"
+            ),
+            error_type="browser_closed",
         )
 
     if isinstance(exc, sr.UnknownSelectorType):
@@ -55,10 +87,18 @@ def _classify_error(exc: Exception, step: Step) -> ErrorDetail:
         error_type = "click_intercepted"
     elif isinstance(exc, StaleElementReferenceException):
         error_type = "stale_element"
+    elif isinstance(exc, TimeoutError):
+        # Raised when nobody signed in within the prelude's window.
+        error_type = "user_login_timeout"
+    elif isinstance(exc, NoSuchWindowException):
+        error_type = "browser_closed"
     elif isinstance(exc, WebDriverException):
         msg = str(exc).lower()
         if "not reachable" in msg or "session deleted" in msg or "page crash" in msg:
             error_type = "page_crash"
+        elif "no such window" in msg or "web view not found" in msg or "target window already closed" in msg:
+            # Usually someone closed the window by hand while watching it run.
+            error_type = "browser_closed"
         else:
             error_type = "webdriver_error"
     else:
@@ -67,7 +107,8 @@ def _classify_error(exc: Exception, step: Step) -> ErrorDetail:
     return ErrorDetail(
         step_id=step.id,
         action=step.action,
-        message=str(exc),
+        # The full selenium stack trace buries the one line that matters.
+        message=_first_line(exc),
         error_type=error_type,
     )
 
@@ -83,7 +124,7 @@ def load_login_prelude() -> list[Step]:
     if not path:
         return []
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, "r", encoding="utf-8-sig") as f:
             raw = json.load(f)
     except OSError as e:
         # Worth shouting about: carrying on without it means not waiting for
@@ -128,15 +169,38 @@ class RecordingInterpreter:
 
     def run(self, bound_vars: dict) -> ToolResult:
         started_at = _now()
-        driver = sr.new_driver()
-        ctx = sr.ExecutionContext(driver)
-
         step_log: list[StepLogEntry] = []
         extracted: dict = {}
         alerts_handled: list[str] = []
         skipped_any = False
+        driver = None
+        browser_info: dict = {}
+
+        # Starting the browser is the step most likely to fail outright — a
+        # driver that does not match the installed browser version is the usual
+        # reason — and it used to raise straight out of here, leaving the caller
+        # with an exception instead of a result saying what went wrong.
+        try:
+            driver = sr.new_driver()
+            browser_info = sr.describe_browser(driver)
+        except Exception as e:
+            return self._failed(
+                started_at,
+                Step(id="__driver__", action="start_browser"),
+                ErrorDetail(
+                    step_id="__driver__",
+                    action="start_browser",
+                    message=f"{_first_line(e)} (browser={config.BROWSER}, "
+                    f"driver_path={config.DRIVER_PATH or 'auto-download'})",
+                    error_type="driver_start_failed",
+                ),
+                extracted,
+                step_log,
+                alerts_handled,
+            )
 
         try:
+            ctx = sr.ExecutionContext(driver)
             driver.get(self.recording.start_url)
             ctx.root_handle = driver.current_window_handle
 
@@ -192,10 +256,22 @@ class RecordingInterpreter:
                     started_at, step, error, extracted, step_log, alerts_handled
                 )
 
-            sr.wait_for_page_settled(driver)
-            screenshot_path = sr.capture_screenshot(
-                driver, self.screenshot_dir, self.recording.id, "final"
-            )
+            # Every step passed; wrapping up must not turn that into a failure.
+            screenshot_path = None
+            try:
+                sr.wait_for_page_settled(driver)
+                screenshot_path = sr.capture_screenshot(
+                    driver, self.screenshot_dir, self.recording.id, "final"
+                )
+            except Exception as e:
+                step_log.append(
+                    StepLogEntry(
+                        step_id="__final__",
+                        action="screenshot",
+                        status="failed",
+                        note=f"steps all passed; final screenshot failed: {_first_line(e)}",
+                    )
+                )
             return ToolResult(
                 scenario_id=self.recording.id,
                 status="partial" if skipped_any else "success",
@@ -206,14 +282,22 @@ class RecordingInterpreter:
                 step_log=step_log,
                 screenshot_path=screenshot_path,
                 alerts_handled=alerts_handled,
+                browser=browser_info,
             )
-        except Exception as e:  # driver startup / start_url navigation failures
+        except Exception as e:
+            # Navigating to start_url, or anything else outside a step.
             synthetic = Step(id="__startup__", action="navigate", options={"url": self.recording.start_url})
             return self._failed(
-                started_at, synthetic, _classify_error(e, synthetic), extracted, step_log, alerts_handled
+                started_at,
+                synthetic,
+                _classify_error(e, synthetic),
+                extracted,
+                step_log,
+                alerts_handled,
+                browser_info,
             )
         finally:
-            if not config.KEEP_BROWSER_OPEN:
+            if driver is not None and not config.KEEP_BROWSER_OPEN:
                 try:
                     driver.quit()
                 except Exception:
@@ -225,9 +309,17 @@ class RecordingInterpreter:
         """Run one step, honouring its retry policy. Returns an error, or None."""
         policy = step.on_error
         attempts = 1 + (policy.retry_count if policy and policy.strategy == "retry" else 0)
+        _debug(f"-> {step.id} ({step.action})")
+
+        # A page that re-renders between finding an element and acting on it
+        # leaves a stale reference. That is a timing accident rather than a
+        # fault in the recording, so it gets one retry of its own, without the
+        # recording having to ask for it.
+        stale_retry_left = 1
 
         last_error: Optional[ErrorDetail] = None
-        for attempt in range(attempts):
+        attempt = 0
+        while attempt < attempts:
             t0 = time.monotonic()
             try:
                 produced = sr.execute_step(driver, step, bound_vars, extracted, ctx, alerts_handled)
@@ -239,19 +331,31 @@ class RecordingInterpreter:
                     extracted.update(produced)
                 if attempt:
                     note = f"succeeded on attempt {attempt + 1}"
+                duration = int((time.monotonic() - t0) * 1000)
+                _debug(f"   {step.id} ok ({duration}ms)")
                 step_log.append(
                     StepLogEntry(
                         step_id=step.id,
                         action=step.action,
                         status="success",
-                        duration_ms=int((time.monotonic() - t0) * 1000),
+                        duration_ms=duration,
                         note=note,
                     )
                 )
                 return None
+            except StaleElementReferenceException as e:
+                last_error = _classify_error(e, step)
+                _debug(f"   {step.id} stale element; retrying once")
+                if stale_retry_left:
+                    stale_retry_left -= 1
+                    time.sleep(config.POLL_INTERVAL_SECONDS)
+                    continue  # does not count against the recording's retries
+                attempt += 1
             except Exception as e:
                 last_error = _classify_error(e, step)
-                if attempt + 1 < attempts:
+                _debug(f"   {step.id} failed: {last_error.error_type}: {_first_line(e)}")
+                attempt += 1
+                if attempt < attempts:
                     time.sleep((policy.retry_interval_ms if policy else 1000) / 1000)
 
         last_error.screenshot_path = sr.capture_screenshot(
@@ -270,7 +374,9 @@ class RecordingInterpreter:
         )
         return last_error
 
-    def _failed(self, started_at, step, error, extracted, step_log, alerts_handled) -> ToolResult:
+    def _failed(
+        self, started_at, step, error, extracted, step_log, alerts_handled, browser_info=None
+    ) -> ToolResult:
         return ToolResult(
             scenario_id=self.recording.id,
             status="failed",
@@ -280,6 +386,7 @@ class RecordingInterpreter:
             failed_step=step.id,
             step_log=step_log,
             error=error,
+            browser=browser_info or {},
             screenshot_path=error.screenshot_path,
             alerts_handled=alerts_handled,
         )

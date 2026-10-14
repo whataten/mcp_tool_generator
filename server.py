@@ -12,8 +12,20 @@ from mcp_registration import ToolRegistry
 from recording_loader import load_all_recordings
 
 
-async def main() -> None:
-    recordings, load_errors = load_all_recordings(config.RECORDINGS_DIR)
+def _report_startup(recordings, load_errors) -> None:
+    """Say what settings are in force and what was loaded.
+
+    Everything here goes to stderr; stdout carries the MCP protocol. When a run
+    misbehaves in a place where nobody can attach a debugger, this banner is
+    the first thing worth reading.
+    """
+    for warning in config.CONFIG_WARNINGS:
+        print(f"[WARN] setting: {warning}", file=sys.stderr)
+
+    print("[INFO] settings in effect:", file=sys.stderr)
+    for key, value in config.effective_settings().items():
+        print(f"[INFO]   {key} = {value}", file=sys.stderr)
+
     for err in load_errors:
         print(f"[WARN] {err}", file=sys.stderr)
 
@@ -21,6 +33,11 @@ async def main() -> None:
         print(f"[WARN] no valid recordings found in {config.RECORDINGS_DIR}", file=sys.stderr)
     else:
         print(f"[INFO] registered {len(recordings)} tool(s): {', '.join(recordings)}", file=sys.stderr)
+
+
+async def main() -> None:
+    recordings, load_errors = load_all_recordings(config.RECORDINGS_DIR)
+    _report_startup(recordings, load_errors)
 
     registry = ToolRegistry(recordings)
 

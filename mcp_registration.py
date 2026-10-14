@@ -2,6 +2,8 @@ import asyncio
 import base64
 import json
 import os
+import sys
+import traceback
 from typing import Any, Optional
 
 import mcp_types as types
@@ -37,9 +39,19 @@ def build_input_model(recording: Recording) -> type[BaseModel]:
     return create_model(f"{recording.id}__Input", **fields)
 
 
-def _error_result(message: str) -> types.CallToolResult:
+def _error_result(message: str, scenario_id: Optional[str] = None) -> types.CallToolResult:
+    """A failure the run never got far enough to describe itself.
+
+    Shaped like a ToolResult so a caller can read it the same way as any other
+    outcome instead of special-casing it.
+    """
+    payload = {
+        "scenario_id": scenario_id,
+        "status": "failed",
+        "error": {"message": message},
+    }
     return types.CallToolResult(
-        content=[types.TextContent(type="text", text=json.dumps({"error": message}, ensure_ascii=False))],
+        content=[types.TextContent(type="text", text=json.dumps(payload, ensure_ascii=False))],
         isError=True,
     )
 
@@ -90,7 +102,17 @@ class ToolRegistry:
         bound_vars = validated.model_dump()
 
         interpreter = RecordingInterpreter(recording)
-        result = await asyncio.to_thread(interpreter.run, bound_vars)
+        try:
+            result = await asyncio.to_thread(interpreter.run, bound_vars)
+        except Exception as e:
+            # The interpreter reports its own failures; reaching here means
+            # something it could not account for. Still answer with a result —
+            # a protocol-level error tells the caller nothing about the run.
+            traceback.print_exc(file=sys.stderr)
+            return _error_result(
+                f"{type(e).__name__}: {e}",
+                scenario_id=name,
+            )
         result_json = result.model_dump(mode="json")
         screenshot_path = result.error.screenshot_path if result.error else result.screenshot_path
         return _to_call_tool_result(result_json, screenshot_path)
